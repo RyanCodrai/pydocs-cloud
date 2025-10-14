@@ -54,7 +54,9 @@ def split_csv_file(cloud_event):
         chunk_df.to_csv(csv_buffer, index=False)
 
         # Upload the chunk to the bucket
-        chunk_blob = bucket.blob(f"{output_dir}-{path.stem}-{chunk_num:012d}.csv")
+        # e.g. silver/test_data-000000000000.csv
+        chunk_filename = str(output_dir / f"{path.stem}-{chunk_num:012d}.csv")
+        chunk_blob = bucket.blob(chunk_filename)
         chunk_blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
 
     blob.delete()
