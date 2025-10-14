@@ -7,9 +7,9 @@ ENTRY_POINT = split_csv_file
 RUNTIME = python312
 TRIGGER_EVENT_TYPE = google.cloud.storage.object.v1.finalized
 
-# Deploy the Cloud Function with EventArc trigger
-.PHONY: deploy
-deploy:
+# Release the Cloud Function with EventArc trigger
+.PHONY: release
+release:
 	gcloud functions deploy $(FUNCTION_NAME) \
 		--gen2 \
 		--runtime=$(RUNTIME) \
