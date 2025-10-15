@@ -65,16 +65,28 @@ resource "google_bigquery_table" "exports" {
       description = "Source BigQuery table that was exported"
     },
     {
-      name        = "destination_uri"
-      type        = "STRING"
-      mode        = "NULLABLE"
-      description = "Destination URI where data was exported (e.g., GCS path)"
-    },
-    {
       name        = "record_count"
       type        = "INTEGER"
       mode        = "NULLABLE"
       description = "Number of records exported"
     }
   ])
+}
+
+# Scheduled Query: PyPI Releases Export
+resource "google_bigquery_data_transfer_config" "pypi_export" {
+  display_name           = "PyPI Releases Export"
+  location               = "US"
+  data_source_id         = "scheduled_query"
+  schedule               = "every 5 minutes"
+  destination_dataset_id = google_bigquery_dataset.exports_dataset.dataset_id
+
+  params = {
+    query = file("${path.module}/queries/pypi_export.sql")
+  }
+
+  depends_on = [
+    google_bigquery_dataset.exports_dataset,
+    google_bigquery_table.exports
+  ]
 }
