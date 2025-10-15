@@ -55,11 +55,17 @@ resource "google_cloudfunctions2_function" "split_csv" {
     purpose    = "csv-splitting"
     managed_by = "terraform"
   }
+
+  depends_on = [
+    google_project_iam_member.split_csv_eventarc_receiver,
+    google_project_iam_member.split_csv_run_invoker,
+    google_storage_bucket_iam_member.split_csv_bucket_access
+  ]
 }
 
 # Service account for the split CSV function
 resource "google_service_account" "split_csv_sa" {
-  account_id   = "pydocs-split-csv-sa"
+  account_id   = "pydocs-csv-splitter-sa"
   display_name = "Service Account for PyDocs CSV Splitting Function"
 }
 
