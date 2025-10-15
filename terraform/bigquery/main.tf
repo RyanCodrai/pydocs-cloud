@@ -13,6 +13,11 @@ provider "google" {
   region  = var.region
 }
 
+# Get project data for dynamic references
+data "google_project" "project" {
+  project_id = var.project_id
+}
+
 # BigQuery Dataset (create if it doesn't exist)
 resource "google_bigquery_dataset" "exports_dataset" {
   dataset_id    = var.dataset_id
@@ -82,7 +87,10 @@ resource "google_bigquery_data_transfer_config" "pypi_export" {
   destination_dataset_id = google_bigquery_dataset.exports_dataset.dataset_id
 
   params = {
-    query = file("${path.module}/queries/pypi_export.sql")
+    query = templatefile("${path.module}/queries/pypi_export.sql", {
+      project_id = var.project_id != null ? var.project_id : data.google_project.project.project_id
+      dataset_id = google_bigquery_dataset.exports_dataset.dataset_id
+    })
   }
 
   depends_on = [

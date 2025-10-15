@@ -9,7 +9,7 @@ SET unix_timestamp = CAST(UNIX_SECONDS(CURRENT_TIMESTAMP()) AS STRING);
 -- Get the most recent timestamp from our exports table. Fallback to 1990-01-01 if no records are found.
 SET last_processed_timestamp = COALESCE(
   (SELECT MAX(timestamp)
-   FROM `***REMOVED***.pydocs_us.exports`
+   FROM `${project_id}.${dataset_id}.exports`
    WHERE source_table = 'bigquery-public-data.pypi.distribution_metadata'),
   TIMESTAMP('1990-01-01')  -- Fallback
 );
@@ -43,10 +43,10 @@ IF record_count > 0 THEN
   SELECT * FROM new_pypi_records;
 
   -- Log the export in the exports tracking table
-  INSERT INTO `***REMOVED***.pydocs_us.exports`
+  INSERT INTO `${project_id}.${dataset_id}.exports`
   (id, export_name, source_table, record_count)
   VALUES (
-    COALESCE((SELECT MAX(id) FROM `***REMOVED***.pydocs_us.exports`), 0) + 1,
+    COALESCE((SELECT MAX(id) FROM `${project_id}.${dataset_id}.exports`), 0) + 1,
     'pypi_releases_export',
     'bigquery-public-data.pypi.distribution_metadata',
     record_count
