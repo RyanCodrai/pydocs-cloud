@@ -13,16 +13,16 @@ provider "google" {
   region  = var.region
 }
 
-# Main BigQuery data bucket
-resource "google_storage_bucket" "pydocs_bq" {
-  name                        = "pydocs-bq"
+# Main data lake bucket
+resource "google_storage_bucket" "pydocs_datalake" {
+  name                        = "pydocs-datalake"
   location                    = "europe-west2"
   storage_class               = "STANDARD"
   uniform_bucket_level_access = true
   public_access_prevention    = "enforced"
 
   labels = {
-    purpose    = "bigquery-data"
+    purpose    = "data-lake"
     managed_by = "terraform"
     zone       = "bronze-silver-gold"
   }
@@ -32,17 +32,17 @@ resource "google_storage_bucket" "pydocs_bq" {
 resource "google_storage_bucket_object" "bronze_folder" {
   name    = "bronze/"
   content = " "
-  bucket  = google_storage_bucket.pydocs_bq.name
+  bucket  = google_storage_bucket.pydocs_datalake.name
 }
 
 resource "google_storage_bucket_object" "silver_folder" {
   name    = "silver/"
   content = " "
-  bucket  = google_storage_bucket.pydocs_bq.name
+  bucket  = google_storage_bucket.pydocs_datalake.name
 }
 
 resource "google_storage_bucket_object" "gold_folder" {
   name    = "gold/"
   content = " "
-  bucket  = google_storage_bucket.pydocs_bq.name
+  bucket  = google_storage_bucket.pydocs_datalake.name
 }
