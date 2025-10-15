@@ -59,9 +59,7 @@ def split_csv_file(cloud_event):
         chunk_blob = bucket.blob(chunk_filename)
         chunk_blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
 
-    blob.delete()
     logger.info(f"✅ Uploaded {len(chunks)} chunks")
-    logger.info(f"✅ Deleted original file: {file_name}")
 
     return {
         "status": "success",
