@@ -63,3 +63,14 @@ service-account-key.json
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Terraform
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/terraform.tfvars
+**/.terraform.lock.hcl
+.terraform/tmp/
+
+# Backend (temporary)
+backend/
