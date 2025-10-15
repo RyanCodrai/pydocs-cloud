@@ -13,7 +13,7 @@ output "function_region" {
   value       = google_cloudfunctions2_function.split_csv.location
 }
 
-output "service_account_email" {
-  description = "Service account email for the function"
-  value       = google_service_account.function_sa.email
+output "split_csv_service_account_email" {
+  description = "Service account email for the split CSV function"
+  value       = google_service_account.split_csv_sa.email
 }
