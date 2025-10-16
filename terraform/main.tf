@@ -9,6 +9,10 @@ terraform {
       source  = "hashicorp/archive"
       version = "~> 2.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 }
 
@@ -29,6 +33,11 @@ module "bigquery" {
 # Cloud Tasks Module - Task queues for async processing
 module "cloud_tasks" {
   source = "./cloud_tasks"
+}
+
+# Cloud SQL Module - PostgreSQL database
+module "cloud_sql" {
+  source = "./cloud_sql"
 }
 
 # Cloud Functions Module - Event-driven functions
