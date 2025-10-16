@@ -13,17 +13,12 @@ output "bucket_console_url" {
   value       = "https://console.cloud.google.com/storage/browser/${google_storage_bucket.pydocs_datalake.name}?project=${var.project_id}"
 }
 
-output "bronze_path" {
-  description = "Path to bronze zone"
-  value       = "gs://${google_storage_bucket.pydocs_datalake.name}/bronze/"
+output "exports_path" {
+  description = "Path to exports zone (raw BigQuery exports)"
+  value       = "gs://${google_storage_bucket.pydocs_datalake.name}/exports/"
 }
 
-output "silver_path" {
-  description = "Path to silver zone"
-  value       = "gs://${google_storage_bucket.pydocs_datalake.name}/silver/"
-}
-
-output "gold_path" {
-  description = "Path to gold zone"
-  value       = "gs://${google_storage_bucket.pydocs_datalake.name}/gold/"
+output "pending_path" {
+  description = "Path to pending zone (chunks waiting to be processed)"
+  value       = "gs://${google_storage_bucket.pydocs_datalake.name}/pending/"
 }
