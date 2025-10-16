@@ -26,15 +26,16 @@ module "bigquery" {
   source = "./bigquery"
 }
 
-# Cloud Functions Module - Event-driven functions
-module "cloud_functions" {
-  source           = "./cloud_functions"
-  data_bucket_name = module.storage.bucket_name
-
-  depends_on = [module.storage]
-}
-
 # Cloud Tasks Module - Task queues for async processing
 module "cloud_tasks" {
   source = "./cloud_tasks"
+}
+
+# Cloud Functions Module - Event-driven functions
+module "cloud_functions" {
+  source                 = "./cloud_functions"
+  data_bucket_name       = module.storage.bucket_name
+  cloud_tasks_queue_name = module.cloud_tasks.package_releases_queue_name
+
+  depends_on = [module.storage, module.cloud_tasks]
 }

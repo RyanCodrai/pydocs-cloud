@@ -37,6 +37,13 @@ resource "google_cloudfunctions2_function" "split_and_enqueue" {
     available_memory      = "512Mi"
     timeout_seconds       = 540
     service_account_email = google_service_account.split_and_enqueue_sa.email
+
+    environment_variables = {
+      GCP_PROJECT            = data.google_client_config.current.project
+      CLOUD_TASKS_LOCATION   = var.region
+      QUEUE_NAME             = var.cloud_tasks_queue_name
+      PYPI_PROCESSOR_URL     = var.pypi_processor_url
+    }
   }
 
   event_trigger {

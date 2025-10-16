@@ -15,3 +15,15 @@ variable "data_bucket_name" {
   type        = string
   default     = "pydocs-datalake"
 }
+
+variable "cloud_tasks_queue_name" {
+  description = "Name of the Cloud Tasks queue for package releases"
+  type        = string
+  default     = "package-releases"
+}
+
+variable "pypi_processor_url" {
+  description = "Cloud Run URL for processing PyPI releases"
+  type        = string
+  default     = "https://pypi-processor-PLACEHOLDER.run.app"
+}
