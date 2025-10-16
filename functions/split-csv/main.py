@@ -27,10 +27,10 @@ def split_csv_file(cloud_event):
     file_name = cloud_event.data.get("name")
     path = Path(file_name)
 
-    # Only process files in bronze/ directory
-    if "bronze" not in path.parts:
-        logger.info(f"Ignoring file outside bronze/: {file_name}")
-        return "Ignored: not in bronze/"
+    # Only process files in exports/ directory
+    if "exports" not in path.parts:
+        logger.info(f"Ignoring file outside exports/: {file_name}")
+        return "Ignored: not in exports/"
 
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
@@ -42,10 +42,10 @@ def split_csv_file(cloud_event):
 
     chunks = split_dataframe(df)
 
-    # Replace 'bronze' with 'silver' in the path
-    # e.g. bronze/releases/x.csv -> silver/releases/x
+    # Replace 'exports' with 'pending' in the path
+    # e.g. exports/pypi/releases/x.csv -> pending/pypi/releases/x
     parts = list(path.parts)
-    parts[parts.index("bronze")] = "silver"
+    parts[parts.index("exports")] = "pending"
     output_dir = Path(*parts[:-1])
 
     for chunk_num, chunk_df in enumerate(chunks):
@@ -54,7 +54,7 @@ def split_csv_file(cloud_event):
         chunk_df.to_csv(csv_buffer, index=False)
 
         # Upload the chunk to the bucket
-        # e.g. silver/test_data-000000000000.csv
+        # e.g. pending/pypi/releases/test_data-000000000000.csv
         chunk_filename = str(output_dir / f"{path.stem}-{chunk_num:012d}.csv")
         chunk_blob = bucket.blob(chunk_filename)
         chunk_blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
