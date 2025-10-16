@@ -1,18 +1,3 @@
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-
 # Main data lake bucket
 resource "google_storage_bucket" "pydocs_datalake" {
   name                        = "pydocs-datalake"

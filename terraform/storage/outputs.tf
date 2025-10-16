@@ -10,7 +10,7 @@ output "bucket_url" {
 
 output "bucket_console_url" {
   description = "URL to view the bucket in GCP console"
-  value       = "https://console.cloud.google.com/storage/browser/${google_storage_bucket.pydocs_datalake.name}?project=${var.project_id}"
+  value       = "https://console.cloud.google.com/storage/browser/${google_storage_bucket.pydocs_datalake.name}"
 }
 
 output "exports_path" {

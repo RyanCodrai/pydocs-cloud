@@ -78,14 +78,14 @@ resource "google_storage_bucket_iam_member" "split_csv_bucket_access" {
 
 # Grant Eventarc event receiver role to the service account
 resource "google_project_iam_member" "split_csv_eventarc_receiver" {
-  project = var.project_id
+  project = data.google_client_config.current.project
   role    = "roles/eventarc.eventReceiver"
   member  = "serviceAccount:${google_service_account.split_csv_sa.email}"
 }
 
 # Grant Cloud Run invoker role to the service account (required for Gen 2 functions)
 resource "google_project_iam_member" "split_csv_run_invoker" {
-  project = var.project_id
+  project = data.google_client_config.current.project
   role    = "roles/run.invoker"
   member  = "serviceAccount:${google_service_account.split_csv_sa.email}"
 }

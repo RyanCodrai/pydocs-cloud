@@ -1,21 +1,6 @@
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-
-# Cloud Tasks Queue for Release Updates
-resource "google_cloud_tasks_queue" "release_updates" {
-  name     = "release-updates"
+# Cloud Tasks Queue for Package Releases (all ecosystems)
+resource "google_cloud_tasks_queue" "package_releases" {
+  name     = "package-releases"
   location = var.region
 
   rate_limits {

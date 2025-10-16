@@ -1,14 +1,14 @@
-output "queue_id" {
-  description = "The ID of the Cloud Tasks queue"
-  value       = google_cloud_tasks_queue.release_updates.id
+output "package_releases_queue_id" {
+  description = "The ID of the package releases Cloud Tasks queue"
+  value       = google_cloud_tasks_queue.package_releases.id
 }
 
-output "queue_name" {
-  description = "The name of the Cloud Tasks queue"
-  value       = google_cloud_tasks_queue.release_updates.name
+output "package_releases_queue_name" {
+  description = "The name of the package releases Cloud Tasks queue"
+  value       = google_cloud_tasks_queue.package_releases.name
 }
 
-output "queue_location" {
-  description = "The location of the Cloud Tasks queue"
-  value       = google_cloud_tasks_queue.release_updates.location
+output "package_releases_queue_location" {
+  description = "The location of the package releases Cloud Tasks queue"
+  value       = google_cloud_tasks_queue.package_releases.location
 }

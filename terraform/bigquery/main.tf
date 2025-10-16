@@ -1,21 +1,5 @@
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-
 # Get project data for dynamic references
 data "google_project" "project" {
-  project_id = var.project_id
 }
 
 # BigQuery Dataset (create if it doesn't exist)
@@ -88,7 +72,7 @@ resource "google_bigquery_data_transfer_config" "pypi_export" {
 
   params = {
     query = templatefile("${path.module}/../../queries/pypi_export.sql", {
-      project_id = var.project_id != null ? var.project_id : data.google_project.project.project_id
+      project_id = data.google_project.project.project_id
       dataset_id = google_bigquery_dataset.exports_dataset.dataset_id
     })
   }

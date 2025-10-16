@@ -5,11 +5,15 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
   }
 }
 
+# Provider will automatically use GOOGLE_PROJECT environment variable
 provider "google" {
-  # Uses gcloud config for project and region
 }
 
 # Storage Module - GCS buckets for data lake
