@@ -9,7 +9,7 @@ resource "google_cloud_tasks_queue" "package_releases" {
   }
 
   retry_config {
-    max_attempts       = 5
+    max_attempts       = 100
     max_retry_duration = "4s"
     max_backoff        = "3s"
     min_backoff        = "0.1s"

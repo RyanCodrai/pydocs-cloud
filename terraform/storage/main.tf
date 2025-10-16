@@ -14,15 +14,8 @@ resource "google_storage_bucket" "pydocs_datalake" {
 
 # Create folder structure (using objects as placeholders)
 # exports/: Raw BigQuery exports (source of truth, kept permanently)
-# pending/: Split chunks waiting to be processed (deleted after processing)
 resource "google_storage_bucket_object" "exports_folder" {
   name    = "exports/"
-  content = " "
-  bucket  = google_storage_bucket.pydocs_datalake.name
-}
-
-resource "google_storage_bucket_object" "pending_folder" {
-  name    = "pending/"
   content = " "
   bucket  = google_storage_bucket.pydocs_datalake.name
 }

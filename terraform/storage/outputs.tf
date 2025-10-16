@@ -17,8 +17,3 @@ output "exports_path" {
   description = "Path to exports zone (raw BigQuery exports)"
   value       = "gs://${google_storage_bucket.pydocs_datalake.name}/exports/"
 }
-
-output "pending_path" {
-  description = "Path to pending zone (chunks waiting to be processed)"
-  value       = "gs://${google_storage_bucket.pydocs_datalake.name}/pending/"
-}
