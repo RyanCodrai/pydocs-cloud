@@ -13,9 +13,9 @@ resource "google_storage_bucket" "pydocs_datalake" {
 }
 
 # Create folder structure (using objects as placeholders)
-# exports/: Raw BigQuery exports (source of truth, kept permanently)
-resource "google_storage_bucket_object" "exports_folder" {
-  name    = "exports/"
+# releases/: Package releases from all ecosystems (source of truth, kept permanently)
+resource "google_storage_bucket_object" "releases_folder" {
+  name    = "releases/"
   content = " "
   bucket  = google_storage_bucket.pydocs_datalake.name
 }

@@ -13,7 +13,7 @@ output "bucket_console_url" {
   value       = "https://console.cloud.google.com/storage/browser/${google_storage_bucket.pydocs_datalake.name}"
 }
 
-output "exports_path" {
-  description = "Path to exports zone (raw BigQuery exports)"
-  value       = "gs://${google_storage_bucket.pydocs_datalake.name}/exports/"
+output "releases_path" {
+  description = "Path to releases zone (raw package releases from all ecosystems)"
+  value       = "gs://${google_storage_bucket.pydocs_datalake.name}/releases/"
 }

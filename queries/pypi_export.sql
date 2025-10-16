@@ -33,9 +33,9 @@ SET record_count = (SELECT COUNT(*) FROM new_pypi_records);
 
 -- Only proceed with export if there are new records to export
 IF record_count > 0 THEN
-  -- Export the new records to GCS exports area of the datalake
+  -- Export the new records to GCS releases area of the datalake
   EXPORT DATA OPTIONS(
-    uri=CONCAT("gs://pydocs-datalake/exports/pypi/releases/", unix_timestamp, "-*.csv"),
+    uri=CONCAT("gs://pydocs-datalake/releases/pypi/", unix_timestamp, "-*.csv"),
     format="CSV",
     header=true,
     overwrite=true
