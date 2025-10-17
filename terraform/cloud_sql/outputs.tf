@@ -10,7 +10,7 @@ output "instance_connection_name" {
 
 output "database_name" {
   description = "The name of the database"
-  value       = google_sql_database.pydocs.name
+  value       = "postgres"
 }
 
 output "public_ip_address" {

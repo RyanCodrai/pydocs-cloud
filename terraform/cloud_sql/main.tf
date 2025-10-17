@@ -1,9 +1,46 @@
 # Cloud SQL PostgreSQL instance for pydocs
+# Private IP only - no public access
+
+# Enable required APIs
+resource "google_project_service" "servicenetworking" {
+  service            = "servicenetworking.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "secretmanager" {
+  service            = "secretmanager.googleapis.com"
+  disable_on_destroy = false
+}
+
+# Reference the default VPC network
+data "google_compute_network" "default" {
+  name = "default"
+}
+
+# Reserve a private IP address range for Cloud SQL
+resource "google_compute_global_address" "private_ip_address" {
+  name          = "pydocs-postgres-private-ip"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  network       = data.google_compute_network.default.id
+}
+
+# Create a private VPC connection
+resource "google_service_networking_connection" "private_vpc_connection" {
+  network                 = data.google_compute_network.default.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
+
+  depends_on = [google_project_service.servicenetworking]
+}
 
 resource "google_sql_database_instance" "pydocs" {
-  name             = "pydocs-postgres"
+  name             = "pydocs-db"
   database_version = "POSTGRES_17"
   region           = var.region
+
+  depends_on = [google_service_networking_connection.private_vpc_connection]
 
   settings {
     tier              = "db-custom-2-7680"
@@ -22,12 +59,9 @@ resource "google_sql_database_instance" "pydocs" {
     }
 
     ip_configuration {
-      ipv4_enabled = true
-      # Add authorized networks as needed
-      # authorized_networks {
-      #   name  = "office"
-      #   value = "0.0.0.0/0"
-      # }
+      ipv4_enabled                                  = false
+      private_network                               = data.google_compute_network.default.id
+      enable_private_path_for_google_cloud_services = true
     }
 
     maintenance_window {
@@ -51,11 +85,7 @@ resource "google_sql_database_instance" "pydocs" {
   }
 }
 
-# Create the pydocs-db database
-resource "google_sql_database" "pydocs" {
-  name     = "pydocs-db"
-  instance = google_sql_database_instance.pydocs.name
-}
+# Use the default 'postgres' database (no need to create a custom database)
 
 # Create a random password for the postgres user
 resource "random_password" "postgres_password" {
@@ -77,6 +107,8 @@ resource "google_secret_manager_secret" "postgres_password" {
   replication {
     auto {}
   }
+
+  depends_on = [google_project_service.secretmanager]
 }
 
 resource "google_secret_manager_secret_version" "postgres_password" {
