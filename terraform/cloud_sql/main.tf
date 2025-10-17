@@ -1,12 +1,7 @@
 # Cloud SQL PostgreSQL instance for pydocs
-# Private IP only - no public access
+# Private IP only (no public IP)
 
 # Enable required APIs
-resource "google_project_service" "servicenetworking" {
-  service            = "servicenetworking.googleapis.com"
-  disable_on_destroy = false
-}
-
 resource "google_project_service" "secretmanager" {
   service            = "secretmanager.googleapis.com"
   disable_on_destroy = false
@@ -17,30 +12,10 @@ data "google_compute_network" "default" {
   name = "default"
 }
 
-# Reserve a private IP address range for Cloud SQL
-resource "google_compute_global_address" "private_ip_address" {
-  name          = "pydocs-postgres-private-ip"
-  purpose       = "VPC_PEERING"
-  address_type  = "INTERNAL"
-  prefix_length = 16
-  network       = data.google_compute_network.default.id
-}
-
-# Create a private VPC connection
-resource "google_service_networking_connection" "private_vpc_connection" {
-  network                 = data.google_compute_network.default.id
-  service                 = "servicenetworking.googleapis.com"
-  reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
-
-  depends_on = [google_project_service.servicenetworking]
-}
-
 resource "google_sql_database_instance" "pydocs" {
   name             = "pydocs-db"
   database_version = "POSTGRES_17"
   region           = var.region
-
-  depends_on = [google_service_networking_connection.private_vpc_connection]
 
   settings {
     tier              = "db-custom-2-7680"
