@@ -16,10 +16,9 @@ variable "data_bucket_name" {
   default     = "pydocs-datalake"
 }
 
-variable "cloud_tasks_queue_name" {
-  description = "Name of the Cloud Tasks queue for package releases"
+variable "cloud_tasks_queue_path" {
+  description = "Full path to the Cloud Tasks queue (projects/PROJECT/locations/LOCATION/queues/QUEUE)"
   type        = string
-  default     = "package-releases"
 }
 
 variable "pypi_processor_url" {

@@ -1,5 +1,5 @@
-output "package_releases_queue_id" {
-  description = "The ID of the package releases Cloud Tasks queue"
+output "package_releases_queue_path" {
+  description = "The full path of the package releases Cloud Tasks queue (projects/PROJECT/locations/LOCATION/queues/QUEUE)"
   value       = google_cloud_tasks_queue.package_releases.id
 }
 

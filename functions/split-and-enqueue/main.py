@@ -15,9 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
-    GCP_PROJECT: str
-    CLOUD_TASKS_LOCATION: str
-    QUEUE_NAME: str
+    QUEUE_PATH: str
     PYPI_PROCESSOR_URL: str
 
     @property
@@ -57,9 +55,6 @@ def extract_ecosystem_from_path(file_path):
 
 def create_cloud_task(client, releases, ecosystem):
     """Create a Cloud Task for processing a chunk of releases."""
-    # Construct the full path to the queue
-    parent = client.queue_path(settings.GCP_PROJECT, settings.CLOUD_TASKS_LOCATION, settings.QUEUE_NAME)
-
     # Create the task
     task = {
         "http_request": {
@@ -73,7 +68,7 @@ def create_cloud_task(client, releases, ecosystem):
     }
 
     # Send the task
-    response = client.create_task(request={"parent": parent, "task": task})
+    response = client.create_task(request={"parent": settings.QUEUE_PATH, "task": task})
     return response
 
 

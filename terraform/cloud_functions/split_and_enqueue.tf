@@ -39,10 +39,8 @@ resource "google_cloudfunctions2_function" "split_and_enqueue" {
     service_account_email = google_service_account.split_and_enqueue_sa.email
 
     environment_variables = {
-      GCP_PROJECT            = data.google_client_config.current.project
-      CLOUD_TASKS_LOCATION   = var.region
-      QUEUE_NAME             = var.cloud_tasks_queue_name
-      PYPI_PROCESSOR_URL     = var.pypi_processor_url
+      QUEUE_PATH         = var.cloud_tasks_queue_path
+      PYPI_PROCESSOR_URL = var.pypi_processor_url
     }
   }
 
@@ -67,7 +65,9 @@ resource "google_cloudfunctions2_function" "split_and_enqueue" {
     google_project_iam_member.split_and_enqueue_eventarc_receiver,
     google_project_iam_member.split_and_enqueue_run_invoker,
     google_project_iam_member.split_and_enqueue_cloudtasks_enqueuer,
-    google_storage_bucket_iam_member.split_and_enqueue_bucket_access
+    google_storage_bucket_iam_member.split_and_enqueue_bucket_access,
+    google_project_iam_member.cloudbuild_sa,
+    google_project_iam_member.gcs_pubsub_publishing
   ]
 }
 
@@ -86,21 +86,21 @@ resource "google_storage_bucket_iam_member" "split_and_enqueue_bucket_access" {
 
 # Grant Eventarc event receiver role to the service account
 resource "google_project_iam_member" "split_and_enqueue_eventarc_receiver" {
-  project = data.google_client_config.current.project
+  project = var.project_id
   role    = "roles/eventarc.eventReceiver"
   member  = "serviceAccount:${google_service_account.split_and_enqueue_sa.email}"
 }
 
 # Grant Cloud Run invoker role to the service account (required for Gen 2 functions)
 resource "google_project_iam_member" "split_and_enqueue_run_invoker" {
-  project = data.google_client_config.current.project
+  project = var.project_id
   role    = "roles/run.invoker"
   member  = "serviceAccount:${google_service_account.split_and_enqueue_sa.email}"
 }
 
 # Grant Cloud Tasks enqueuer role to the service account
 resource "google_project_iam_member" "split_and_enqueue_cloudtasks_enqueuer" {
-  project = data.google_client_config.current.project
+  project = var.project_id
   role    = "roles/cloudtasks.enqueuer"
   member  = "serviceAccount:${google_service_account.split_and_enqueue_sa.email}"
 }
