@@ -48,3 +48,16 @@ module "cloud_functions" {
 
   depends_on = [module.storage, module.cloud_tasks]
 }
+
+# Secrets Module - Secret Manager for application config
+module "secrets" {
+  source = "./secrets"
+
+  # Cloud Run uses default compute service account by default
+  # Update this if you create a dedicated service account
+  cloud_run_service_account = data.google_compute_default_service_account.default.email
+}
+
+# Data source for default compute service account
+data "google_compute_default_service_account" "default" {
+}
