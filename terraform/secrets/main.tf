@@ -59,19 +59,10 @@ resource "google_secret_manager_secret" "postgres_user" {
   }
 }
 
-resource "google_secret_manager_secret" "postgres_password" {
+# postgres_password secret is created by cloud_sql module
+# We just reference it here for IAM permissions
+data "google_secret_manager_secret" "postgres_password" {
   secret_id = "postgres-password"
-
-  replication {
-    auto {}
-  }
-
-  labels = {
-    environment = var.environment
-    managed_by  = "terraform"
-    category    = "database"
-    sensitive   = "true"
-  }
 }
 
 resource "google_secret_manager_secret" "postgres_host" {
@@ -166,7 +157,7 @@ locals {
     app-environment      = google_secret_manager_secret.environment.id
     postgres-db          = google_secret_manager_secret.postgres_db.id
     postgres-user        = google_secret_manager_secret.postgres_user.id
-    postgres-password    = google_secret_manager_secret.postgres_password.id
+    postgres-password    = data.google_secret_manager_secret.postgres_password.id
     postgres-host        = google_secret_manager_secret.postgres_host.id
     postgres-port        = google_secret_manager_secret.postgres_port.id
     auth0-domain         = google_secret_manager_secret.auth0_domain.id
