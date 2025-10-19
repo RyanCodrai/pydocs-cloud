@@ -13,11 +13,6 @@ output "database_name" {
   value       = "postgres"
 }
 
-output "public_ip_address" {
-  description = "The public IP address of the instance"
-  value       = google_sql_database_instance.pydocs.public_ip_address
-}
-
 output "private_ip_address" {
   description = "The private IP address of the instance"
   value       = google_sql_database_instance.pydocs.private_ip_address
@@ -26,4 +21,20 @@ output "private_ip_address" {
 output "postgres_password_secret" {
   description = "The Secret Manager secret ID containing the postgres password"
   value       = google_secret_manager_secret.postgres_password.secret_id
+}
+
+output "database_user" {
+  description = "The database user name"
+  value       = google_sql_user.postgres.name
+}
+
+output "database_password" {
+  description = "The database password (sensitive)"
+  value       = random_password.postgres_password.result
+  sensitive   = true
+}
+
+output "database_port" {
+  description = "The database port (PostgreSQL default, not configurable in Cloud SQL)"
+  value       = "5432"
 }
