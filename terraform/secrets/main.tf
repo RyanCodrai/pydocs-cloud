@@ -161,23 +161,23 @@ resource "google_secret_manager_secret" "auth0_algorithms" {
 
 # Grant Cloud Run service account access to all secrets
 locals {
-  secrets = [
-    google_secret_manager_secret.logging_level.id,
-    google_secret_manager_secret.environment.id,
-    google_secret_manager_secret.postgres_db.id,
-    google_secret_manager_secret.postgres_user.id,
-    google_secret_manager_secret.postgres_password.id,
-    google_secret_manager_secret.postgres_host.id,
-    google_secret_manager_secret.postgres_port.id,
-    google_secret_manager_secret.auth0_domain.id,
-    google_secret_manager_secret.auth0_issuer.id,
-    google_secret_manager_secret.auth0_client_id.id,
-    google_secret_manager_secret.auth0_algorithms.id,
-  ]
+  secrets = {
+    logging-level        = google_secret_manager_secret.logging_level.id
+    app-environment      = google_secret_manager_secret.environment.id
+    postgres-db          = google_secret_manager_secret.postgres_db.id
+    postgres-user        = google_secret_manager_secret.postgres_user.id
+    postgres-password    = google_secret_manager_secret.postgres_password.id
+    postgres-host        = google_secret_manager_secret.postgres_host.id
+    postgres-port        = google_secret_manager_secret.postgres_port.id
+    auth0-domain         = google_secret_manager_secret.auth0_domain.id
+    auth0-issuer         = google_secret_manager_secret.auth0_issuer.id
+    auth0-client-id      = google_secret_manager_secret.auth0_client_id.id
+    auth0-algorithms     = google_secret_manager_secret.auth0_algorithms.id
+  }
 }
 
 resource "google_secret_manager_secret_iam_member" "cloud_run_access" {
-  for_each = toset(local.secrets)
+  for_each = local.secrets
 
   secret_id = each.value
   role      = "roles/secretmanager.secretAccessor"
