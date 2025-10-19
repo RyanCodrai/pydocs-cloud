@@ -1,3 +1,8 @@
+variable "project_id" {
+  description = "Google Cloud project ID"
+  type        = string
+}
+
 variable "region" {
   description = "Region for Cloud SQL instance"
   type        = string
@@ -5,7 +10,6 @@ variable "region" {
 }
 
 variable "environment" {
-  description = "Environment name (e.g., prod, staging)"
+  description = "Environment name (derived from terraform workspace)"
   type        = string
-  default     = "prod"
 }

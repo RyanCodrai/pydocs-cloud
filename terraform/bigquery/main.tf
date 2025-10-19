@@ -1,6 +1,4 @@
-# Get project data for dynamic references
-data "google_project" "project" {
-}
+# Project ID is passed as a variable
 
 # BigQuery Dataset (create if it doesn't exist)
 resource "google_bigquery_dataset" "exports_dataset" {
@@ -72,7 +70,7 @@ resource "google_bigquery_data_transfer_config" "pypi_incremental_export" {
 
   params = {
     query = templatefile("${path.module}/../../queries/pypi_incremental_export.sql", {
-      project_id = data.google_project.project.project_id
+      project_id = var.project_id
       dataset_id = google_bigquery_dataset.exports_dataset.dataset_id
     })
   }
