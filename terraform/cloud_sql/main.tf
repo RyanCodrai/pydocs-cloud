@@ -12,6 +12,22 @@ data "google_compute_network" "default" {
   name = "default"
 }
 
+# Allocate IP range for private services connection
+resource "google_compute_global_address" "private_ip_range" {
+  name          = "pydocs-private-ip-range"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  network       = data.google_compute_network.default.id
+}
+
+# Create private VPC connection for Cloud SQL
+resource "google_service_networking_connection" "private_vpc_connection" {
+  network                 = data.google_compute_network.default.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_ip_range.name]
+}
+
 resource "google_sql_database_instance" "pydocs" {
   name             = "pydocs-db"
   database_version = "POSTGRES_17"
@@ -58,6 +74,8 @@ resource "google_sql_database_instance" "pydocs" {
   lifecycle {
     prevent_destroy = true
   }
+
+  depends_on = [google_service_networking_connection.private_vpc_connection]
 }
 
 # Use the default 'postgres' database (no need to create a custom database)
