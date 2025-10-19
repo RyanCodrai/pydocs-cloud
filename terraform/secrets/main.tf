@@ -16,6 +16,11 @@ resource "google_secret_manager_secret" "logging_level" {
   }
 }
 
+resource "google_secret_manager_secret_version" "logging_level" {
+  secret      = google_secret_manager_secret.logging_level.id
+  secret_data = var.logging_level
+}
+
 resource "google_secret_manager_secret" "environment" {
   secret_id = "app-environment"
 
@@ -28,6 +33,11 @@ resource "google_secret_manager_secret" "environment" {
     managed_by  = "terraform"
     category    = "config"
   }
+}
+
+resource "google_secret_manager_secret_version" "environment" {
+  secret      = google_secret_manager_secret.environment.id
+  secret_data = upper(var.environment)
 }
 
 # Database Configuration
@@ -45,6 +55,11 @@ resource "google_secret_manager_secret" "postgres_db" {
   }
 }
 
+resource "google_secret_manager_secret_version" "postgres_db" {
+  secret      = google_secret_manager_secret.postgres_db.id
+  secret_data = var.postgres_db
+}
+
 resource "google_secret_manager_secret" "postgres_user" {
   secret_id = "postgres-user"
 
@@ -57,6 +72,11 @@ resource "google_secret_manager_secret" "postgres_user" {
     managed_by  = "terraform"
     category    = "database"
   }
+}
+
+resource "google_secret_manager_secret_version" "postgres_user" {
+  secret      = google_secret_manager_secret.postgres_user.id
+  secret_data = var.postgres_user
 }
 
 # postgres_password secret is created by cloud_sql module
@@ -79,6 +99,11 @@ resource "google_secret_manager_secret" "postgres_host" {
   }
 }
 
+resource "google_secret_manager_secret_version" "postgres_host" {
+  secret      = google_secret_manager_secret.postgres_host.id
+  secret_data = var.postgres_host
+}
+
 resource "google_secret_manager_secret" "postgres_port" {
   secret_id = "postgres-port"
 
@@ -91,6 +116,11 @@ resource "google_secret_manager_secret" "postgres_port" {
     managed_by  = "terraform"
     category    = "database"
   }
+}
+
+resource "google_secret_manager_secret_version" "postgres_port" {
+  secret      = google_secret_manager_secret.postgres_port.id
+  secret_data = var.postgres_port
 }
 
 # Auth0 Configuration
