@@ -83,6 +83,12 @@ resource "google_secret_manager_secret" "postgres_password" {
     auto {}
   }
 
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+    category    = "database"
+  }
+
   depends_on = [google_project_service.secretmanager]
 }
 
