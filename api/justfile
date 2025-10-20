@@ -1,0 +1,88 @@
+# PyDocs API - Development Commands
+# Install just: https://github.com/casey/just
+# Run `just` or `just --list` to see all commands
+
+# Default recipe shows help
+default:
+    @just --list
+
+# Build Docker images
+build:
+    docker compose -f docker-compose.dev.yaml build
+
+# Start dev environment and open shell
+start:
+    docker compose -f docker-compose.dev.yaml up -d --build
+    docker exec -it fastapi-dev bash
+
+# Stop all containers
+stop:
+    docker compose -f docker-compose.dev.yaml down
+
+# Restart containers
+restart: stop start
+
+# Run FastAPI app (inside container)
+app:
+    uvicorn --host 0.0.0.0 --port 8080 src.main:application --reload
+
+# Update dependencies (inside container)
+deps:
+    uv lock --upgrade
+
+# Run all tests with coverage (inside container)
+test:
+    coverage run -m pytest --log-cli-level=INFO && coverage report
+
+# Run unit tests only (inside container)
+test-unit:
+    coverage run -m pytest tests/unit --log-cli-level=INFO && coverage report
+
+# Run integration tests only (inside container)
+test-integration:
+    pytest tests/integration --log-cli-level=INFO
+
+# Recreate PostgreSQL database (WARNING: deletes data)
+recreate-db:
+    docker stop postgres_db || true
+    docker rm postgres_db || true
+    docker volume rm api_postgres_data || true
+    docker compose -f docker-compose.dev.yaml up -d db
+    @echo "✅ PostgreSQL container and volume recreated"
+
+# View logs from all services
+logs:
+    docker compose -f docker-compose.dev.yaml logs -f
+
+# View FastAPI logs
+logs-api:
+    docker logs -f fastapi-dev
+
+# View PostgreSQL logs
+logs-db:
+    docker logs -f postgres_db
+
+# Open bash shell in dev container
+shell:
+    docker exec -it fastapi-dev bash
+
+# Open psql shell in database
+db-shell:
+    docker exec -it postgres_db psql -U myuser -d mydb
+
+# Remove all containers and volumes
+clean:
+    docker compose -f docker-compose.dev.yaml down -v
+    docker system prune -f
+
+# Format code with ruff (inside container)
+fmt:
+    uv run ruff format .
+
+# Lint code with ruff (inside container)
+lint:
+    uv run ruff check .
+
+# Run linter and fix issues (inside container)
+lint-fix:
+    uv run ruff check --fix .
