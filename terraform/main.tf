@@ -162,6 +162,19 @@ module "cloud_run" {
   ]
 }
 
+# Compute Module - Gateway instance for debugging
+module "compute" {
+  source = "./compute"
+
+  project_id  = local.project_id
+  region      = local.region
+  environment = local.environment
+
+  depends_on = [
+    google_project_service.required_apis["compute.googleapis.com"]
+  ]
+}
+
 # Data source for default compute service account
 data "google_compute_default_service_account" "default" {
   depends_on = [
