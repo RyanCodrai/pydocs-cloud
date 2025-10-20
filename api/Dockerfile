@@ -30,8 +30,9 @@ RUN uv pip install --system -r pyproject.toml
 # ============================================
 FROM base AS production-deps
 
-# Install ONLY production dependencies globally (no dev deps)
-RUN uv pip install --system --no-dev -r pyproject.toml
+# Generate production-only requirements and install globally (no dev deps)
+RUN uv export --no-dev --format requirements-txt > requirements.txt && \
+    uv pip install --system -r requirements.txt
 
 # ============================================
 # Final stage (merge point)
