@@ -8,7 +8,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 WORKDIR /srv
 
 # Set PYTHONPATH
-ENV PYTHONPATH="/srv"
+ENV PYTHONPATH="/srv" \
+    PYTHONUNBUFFERED=1
 
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
@@ -21,16 +22,16 @@ FROM base AS development-deps
 # Install system dependencies + dev tools
 RUN apt-get update && apt-get install -y make && rm -rf /var/lib/apt/lists/*
 
-# Install ALL dependencies (including dev)
-RUN uv sync --frozen
+# Install ALL dependencies globally (including dev)
+RUN uv pip install --system -r pyproject.toml
 
 # ============================================
 # Production dependencies
 # ============================================
 FROM base AS production-deps
 
-# Install ONLY production dependencies (no dev deps)
-RUN uv sync --frozen --no-dev
+# Install ONLY production dependencies globally (no dev deps)
+RUN uv pip install --system --no-dev -r pyproject.toml
 
 # ============================================
 # Final stage (merge point)
@@ -39,14 +40,17 @@ FROM ${BUILD_TARGET:-development-deps} AS final
 
 # Create non-root user
 RUN adduser --quiet --disabled-password \
-    --home /home/dojo-user \
-    --shell /bin/bash dojo-user
+    --home /home/appuser \
+    --shell /bin/bash appuser
 
 # Copy application code
 COPY . /srv
 
+# Change ownership
+RUN chown -R appuser:appuser /srv
+
 # Switch to non-root user
-USER dojo-user
+USER appuser
 
 EXPOSE 8080
 
