@@ -6,14 +6,24 @@
 default:
     @just --list
 
-# Build Docker images
+# Build Docker images (with dependency update)
 build:
+    uv lock --upgrade
     docker compose -f docker-compose.dev.yaml build
 
-# Start dev environment and open shell
+# Start all services (user API, releases API, and database) in separate tabs
 start:
     docker compose -f docker-compose.dev.yaml up -d --build
-    docker exec -it fastapi-dev bash
+
+# Start user API inside container
+user:
+    docker compose -f docker-compose.dev.yaml up -d --build user-api db
+    docker exec -it pydocs-user-api bash -c "SERVICE_TYPE=user uvicorn src.main:application --host 0.0.0.0 --port 8080 --reload"
+
+# Start releases API inside container
+releases: 
+    docker compose -f docker-compose.dev.yaml up -d --build releases-api db
+    docker exec -it pydocs-releases-api bash -c "SERVICE_TYPE=releases uvicorn src.main:application --host 0.0.0.0 --port 8081 --reload"
 
 # Stop all containers
 stop:
@@ -21,29 +31,6 @@ stop:
 
 # Restart containers
 restart: stop start
-
-# Run FastAPI app with all routes (inside container)
-app:
-    uvicorn --host 0.0.0.0 --port 8080 src.main:application --reload
-
-# Run user API only on port 8080 (inside container)
-app-user:
-    SERVICE_TYPE=user uvicorn --host 0.0.0.0 --port 8080 src.main:application --reload
-
-# Run releases API only on port 8081 (inside container)
-app-releases:
-    SERVICE_TYPE=releases uvicorn --host 0.0.0.0 --port 8081 src.main:application --reload
-
-# Run both APIs simultaneously (inside container) - user on 8080, releases on 8081
-app-both:
-    #!/usr/bin/env bash
-    SERVICE_TYPE=user uvicorn --host 0.0.0.0 --port 8080 src.main:application --reload &
-    SERVICE_TYPE=releases uvicorn --host 0.0.0.0 --port 8081 src.main:application --reload &
-    wait
-
-# Update dependencies (inside container)
-deps:
-    uv lock --upgrade
 
 # Run all tests with coverage (inside container)
 test:
@@ -65,39 +52,8 @@ recreate-db:
     docker compose -f docker-compose.dev.yaml up -d db
     @echo "✅ PostgreSQL container and volume recreated"
 
-# View logs from all services
-logs:
-    docker compose -f docker-compose.dev.yaml logs -f
-
-# View FastAPI logs
-logs-api:
-    docker logs -f fastapi-dev
-
-# View PostgreSQL logs
-logs-db:
-    docker logs -f postgres_db
-
-# Open bash shell in dev container
-shell:
-    docker exec -it fastapi-dev bash
-
-# Open psql shell in database
-db-shell:
-    docker exec -it postgres_db psql -U myuser -d mydb
-
 # Remove all containers and volumes
 clean:
     docker compose -f docker-compose.dev.yaml down -v
     docker system prune -f
 
-# Format code with ruff (inside container)
-fmt:
-    uv run ruff format .
-
-# Lint code with ruff (inside container)
-lint:
-    uv run ruff check .
-
-# Run linter and fix issues (inside container)
-lint-fix:
-    uv run ruff check --fix .

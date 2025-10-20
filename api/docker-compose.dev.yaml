@@ -1,14 +1,15 @@
 version: "3.7"
 services:
-  dev:
-    container_name: fastapi-dev
+  # User API service
+  user-api:
+    container_name: pydocs-user-api
     build:
       context: .
       dockerfile: Dockerfile
       args:
         BUILD_TARGET: development-deps
     command: tail -f /dev/null
-    stop_grace_period: 0s  # Add this line
+    stop_grace_period: 0s
     volumes:
       - type: bind
         source: .
@@ -16,13 +17,44 @@ services:
         consistency: cached
       - type: bind
         source: ~/.config/gcloud/application_default_credentials.json
-        target: /home/dojo_user/.config/gcloud/application_default_credentials.json
+        target: /home/appuser/.config/gcloud/application_default_credentials.json
         read_only: true
     env_file:
       - .env
-    restart: always
+    environment:
+      - SERVICE_TYPE=user
+    restart: unless-stopped
     ports:
       - 8080:8080
+    depends_on:
+      - db
+
+  # Releases API service
+  releases-api:
+    container_name: pydocs-releases-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_TARGET: development-deps
+    command: tail -f /dev/null
+    stop_grace_period: 0s
+    volumes:
+      - type: bind
+        source: .
+        target: /srv
+        consistency: cached
+      - type: bind
+        source: ~/.config/gcloud/application_default_credentials.json
+        target: /home/appuser/.config/gcloud/application_default_credentials.json
+        read_only: true
+    env_file:
+      - .env
+    environment:
+      - SERVICE_TYPE=releases
+    restart: unless-stopped
+    ports:
+      - 8081:8081
     depends_on:
       - db
 
