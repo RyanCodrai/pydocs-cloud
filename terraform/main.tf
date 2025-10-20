@@ -32,6 +32,9 @@ locals {
     staging = "pydocs-staging"
   }[local.environment]
 
+  # Default region for all resources
+  region = "europe-west2"
+
   # Required GCP APIs for the project
   required_apis = [
     "compute.googleapis.com",
@@ -146,9 +149,9 @@ module "cloud_run" {
   source = "./cloud_run"
 
   project_id                = local.project_id
-  region                    = "us-central1"
+  region                    = local.region
   environment               = local.environment
-  docker_image              = "us-central1-docker.pkg.dev/${local.project_id}/pydocs-images/pydocs-api:latest"
+  docker_image              = "${local.region}-docker.pkg.dev/${local.project_id}/pydocs-images/pydocs-api:latest"
   cloud_sql_connection_name = module.cloud_sql.instance_connection_name
 
   depends_on = [
