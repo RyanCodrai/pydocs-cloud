@@ -71,6 +71,3 @@ service-account-key.json
 **/terraform.tfvars
 **/.terraform.lock.hcl
 .terraform/tmp/
-
-# Backend (temporary)
-backend/
