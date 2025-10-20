@@ -1,0 +1,41 @@
+version: "3.7"
+services:
+  dev:
+    container_name: fastapi-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_TARGET: development-deps
+    command: tail -f /dev/null
+    stop_grace_period: 0s  # Add this line
+    volumes:
+      - type: bind
+        source: .
+        target: /srv
+        consistency: cached
+      - type: bind
+        source: ~/.config/gcloud/application_default_credentials.json
+        target: /home/dojo_user/.config/gcloud/application_default_credentials.json
+        read_only: true
+    env_file:
+      - .env
+    restart: always
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+
+  db:
+    image: postgres:13
+    container_name: postgres_db
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: always
+
+volumes:
+  postgres_data:

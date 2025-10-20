@@ -1,0 +1,75 @@
+[project]
+name = "pydocs-cloud-backend"
+version = "0.1.0"
+description = "PyDocs Cloud Backend API - FastAPI service for package search and management"
+requires-python = ">=3.11"
+dependencies = [
+    # Web Framework
+    "fastapi",
+    "uvicorn",
+    "gunicorn",
+
+    # Database
+    "sqlmodel",
+    "asyncpg",
+
+    # Configuration
+    "pydantic-settings",
+    "python-dotenv",
+
+    # Cloud Services
+    "google-cloud-logging",
+
+    # Security & Authentication
+    "pyjwt",
+    "cryptography",
+
+    # HTTP Client
+    "aiohttp",
+
+    # Machine Learning & Data Processing
+    "numpy",
+    "scikit-learn",
+    "pandas",
+
+    # Utilities
+    "tenacity",
+    "pytest-asyncio",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "coverage",
+    "pre-commit",
+    "pip-tools",
+    "httpx",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = []
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
