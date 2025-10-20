@@ -22,9 +22,24 @@ stop:
 # Restart containers
 restart: stop start
 
-# Run FastAPI app (inside container)
+# Run FastAPI app with all routes (inside container)
 app:
     uvicorn --host 0.0.0.0 --port 8080 src.main:application --reload
+
+# Run user API only on port 8080 (inside container)
+app-user:
+    SERVICE_TYPE=user uvicorn --host 0.0.0.0 --port 8080 src.main:application --reload
+
+# Run releases API only on port 8081 (inside container)
+app-releases:
+    SERVICE_TYPE=releases uvicorn --host 0.0.0.0 --port 8081 src.main:application --reload
+
+# Run both APIs simultaneously (inside container) - user on 8080, releases on 8081
+app-both:
+    #!/usr/bin/env bash
+    SERVICE_TYPE=user uvicorn --host 0.0.0.0 --port 8080 src.main:application --reload &
+    SERVICE_TYPE=releases uvicorn --host 0.0.0.0 --port 8081 src.main:application --reload &
+    wait
 
 # Update dependencies (inside container)
 deps:
