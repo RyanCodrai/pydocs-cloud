@@ -44,6 +44,7 @@ locals {
     "sqladmin.googleapis.com",
     "secretmanager.googleapis.com",
     "servicenetworking.googleapis.com",
+    "artifactregistry.googleapis.com",
   ]
 }
 
@@ -117,6 +118,19 @@ module "secrets" {
   postgres_port     = module.cloud_sql.database_port
 
   depends_on = [google_project_service.required_apis, module.cloud_sql]
+}
+
+# Cloud Run Module - API services
+module "cloud_run" {
+  source = "./cloud_run"
+
+  project_id                = local.project_id
+  region                    = "us-central1"
+  environment               = local.environment
+  docker_image              = "us-central1-docker.pkg.dev/${local.project_id}/pydocs-images/pydocs-api:latest"
+  cloud_sql_connection_name = module.cloud_sql.instance_connection_name
+
+  depends_on = [google_project_service.required_apis, module.cloud_sql, module.secrets]
 }
 
 # Data source for default compute service account
