@@ -60,7 +60,9 @@ resource "google_project_service" "required_apis" {
 module "storage" {
   source = "./storage"
 
-  depends_on = [google_project_service.required_apis]
+  depends_on = [
+    google_project_service.required_apis["compute.googleapis.com"]
+  ]
 }
 
 # BigQuery Module - Dataset and scheduled queries
@@ -70,14 +72,18 @@ module "bigquery" {
   project_id  = local.project_id
   environment = local.environment
 
-  depends_on = [google_project_service.required_apis]
+  depends_on = [
+    google_project_service.required_apis["bigquerydatatransfer.googleapis.com"]
+  ]
 }
 
 # Cloud Tasks Module - Task queues for async processing
 module "cloud_tasks" {
   source = "./cloud_tasks"
 
-  depends_on = [google_project_service.required_apis]
+  depends_on = [
+    google_project_service.required_apis["cloudtasks.googleapis.com"]
+  ]
 }
 
 # Cloud SQL Module - PostgreSQL database
@@ -87,7 +93,12 @@ module "cloud_sql" {
   project_id  = local.project_id
   environment = local.environment
 
-  depends_on = [google_project_service.required_apis]
+  depends_on = [
+    google_project_service.required_apis["compute.googleapis.com"],
+    google_project_service.required_apis["sqladmin.googleapis.com"],
+    google_project_service.required_apis["secretmanager.googleapis.com"],
+    google_project_service.required_apis["servicenetworking.googleapis.com"]
+  ]
 }
 
 # Cloud Functions Module - Event-driven functions
@@ -97,7 +108,14 @@ module "cloud_functions" {
   data_bucket_name       = module.storage.bucket_name
   cloud_tasks_queue_path = module.cloud_tasks.package_releases_queue_path
 
-  depends_on = [google_project_service.required_apis, module.storage, module.cloud_tasks]
+  depends_on = [
+    google_project_service.required_apis["cloudfunctions.googleapis.com"],
+    google_project_service.required_apis["cloudbuild.googleapis.com"],
+    google_project_service.required_apis["eventarc.googleapis.com"],
+    google_project_service.required_apis["run.googleapis.com"],
+    module.storage,
+    module.cloud_tasks
+  ]
 }
 
 # Secrets Module - Secret Manager for application config
@@ -117,7 +135,10 @@ module "secrets" {
   postgres_host     = module.cloud_sql.private_ip_address
   postgres_port     = module.cloud_sql.database_port
 
-  depends_on = [google_project_service.required_apis, module.cloud_sql]
+  depends_on = [
+    google_project_service.required_apis["secretmanager.googleapis.com"],
+    module.cloud_sql
+  ]
 }
 
 # Cloud Run Module - API services
@@ -130,10 +151,17 @@ module "cloud_run" {
   docker_image              = "us-central1-docker.pkg.dev/${local.project_id}/pydocs-images/pydocs-api:latest"
   cloud_sql_connection_name = module.cloud_sql.instance_connection_name
 
-  depends_on = [google_project_service.required_apis, module.cloud_sql, module.secrets]
+  depends_on = [
+    google_project_service.required_apis["run.googleapis.com"],
+    google_project_service.required_apis["artifactregistry.googleapis.com"],
+    module.cloud_sql,
+    module.secrets
+  ]
 }
 
 # Data source for default compute service account
 data "google_compute_default_service_account" "default" {
-  depends_on = [google_project_service.required_apis]
+  depends_on = [
+    google_project_service.required_apis["compute.googleapis.com"]
+  ]
 }
