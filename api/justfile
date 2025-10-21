@@ -57,3 +57,10 @@ clean:
     docker compose -f docker-compose.dev.yaml down -v
     docker system prune -f
 
+# Deploy releases API to production (build + terraform apply)
+deploy-releases:
+    @echo "📦 Building and pushing Docker image to production..."
+    gcloud builds submit --config=cloudbuild.yaml --project=pydocs-prod
+    @echo "🚀 Deploying to Cloud Run via Terraform..."
+    cd ../terraform && terraform apply
+
