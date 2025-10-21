@@ -1,6 +1,17 @@
 # PyDocs Releases API - Cloud Run Service
 # This service processes package releases and MUST never miss an event
 
+# Reference the default VPC network
+data "google_compute_network" "default" {
+  name = "default"
+}
+
+# Get the subnet for the region
+data "google_compute_subnetwork" "default" {
+  name   = "default"
+  region = var.region
+}
+
 # Service account for releases API
 resource "google_service_account" "releases_api" {
   account_id   = "pydocs-releases-api"
@@ -53,8 +64,8 @@ resource "google_cloud_run_v2_service" "releases_api" {
     # VPC connector for Cloud SQL access
     vpc_access {
       network_interfaces {
-        network    = "default"
-        subnetwork = "default"
+        network    = data.google_compute_network.default.id
+        subnetwork = data.google_compute_subnetwork.default.id
       }
       egress = "PRIVATE_RANGES_ONLY"
     }
