@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest_asyncio
 from dotenv import load_dotenv
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -43,7 +42,6 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
     # Create tables
     async with async_engine.begin() as conn:
-        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS secure_credentials"))
         await conn.run_sync(SQLModel.metadata.create_all)
 
     # Provide session to test

@@ -3,7 +3,6 @@ from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 
 from fastapi import FastAPI
-from sqlalchemy import text
 from sqlmodel import SQLModel
 from src.db.operations import async_engine
 from src.settings import settings
@@ -43,7 +42,6 @@ async def database() -> AsyncIterator[None]:
     # Initialisation phase
     try:
         async with async_engine.begin() as conn:
-            await conn.execute(text("CREATE SCHEMA IF NOT EXISTS secure_credentials"))
             await conn.run_sync(SQLModel.metadata.create_all)
         logger.info(f'Database tables created successfully for "{settings.POSTGRES_DB}".')
     except Exception as exc:
