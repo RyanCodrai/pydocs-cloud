@@ -9,7 +9,13 @@ class PackageInput(BaseModel):
     ecosystem: str
     package_name: str
     source_code: str | None = None
-    source_code_stars: int | None = None
     first_seen: datetime
     last_seen: datetime
-    pydocs_rank: int | None = None
+
+
+class PackageUpdate(BaseModel):
+    ecosystem: str | None = None
+    package_name: str | None = None
+    source_code: str | None = None
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None

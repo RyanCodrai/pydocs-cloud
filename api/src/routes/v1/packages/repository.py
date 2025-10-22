@@ -40,18 +40,19 @@ class PackageRepository:
         return list(result.scalars().all())
 
     async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
+        # Build the update set dynamically, excluding unset fields and unique keys
+        update_dict = data.model_dump(exclude_unset=True, exclude={"ecosystem", "package_name"})
+
+        # Always update first_seen and last_seen with min/max logic
+        update_dict["first_seen"] = func.least(DBPackage.first_seen, data.first_seen)
+        update_dict["last_seen"] = func.greatest(DBPackage.last_seen, data.last_seen)
+
         stmt = (
             insert(DBPackage)
             .values(**data.model_dump())
             .on_conflict_do_update(
                 constraint="unique_package",
-                set_={
-                    "source_code": data.source_code,
-                    "source_code_stars": data.source_code_stars,
-                    "first_seen": func.least(DBPackage.first_seen, data.first_seen),
-                    "last_seen": func.greatest(DBPackage.last_seen, data.last_seen),
-                    "pydocs_rank": data.pydocs_rank,
-                },
+                set_=update_dict,
             )
             .returning(DBPackage)
         )
