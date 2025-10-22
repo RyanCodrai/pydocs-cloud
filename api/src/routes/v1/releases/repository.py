@@ -41,7 +41,7 @@ class ReleaseRepository:
     async def upsert(self, data: ReleaseInput, commit: bool = True) -> DBRelease:
         stmt = (
             insert(DBRelease)
-            .values(**data.model_dump())
+            .values(**data.model_dump(exclude_unset=True))
             .on_conflict_do_update(
                 constraint="unique_release",
                 set_={
