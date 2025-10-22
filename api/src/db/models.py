@@ -58,6 +58,9 @@ class DBPackage(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     ecosystem: str = Field(index=True)
     package_name: str = Field(index=True)
+    description: str | None = Field(default=None)
+    home_page: str | None = Field(default=None)
+    project_urls: str | None = Field(default=None)  # JSON string
     source_code: str | None = Field(default=None)
     source_code_stars: int | None = Field(default=None)
     first_seen: datetime

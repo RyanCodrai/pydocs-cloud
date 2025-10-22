@@ -8,6 +8,9 @@ from pydantic import BaseModel
 class PackageInput(BaseModel):
     ecosystem: str
     package_name: str
+    description: str | None = None
+    home_page: str | None = None
+    project_urls: str | None = None
     source_code: str | None = None
     first_seen: datetime
     last_seen: datetime

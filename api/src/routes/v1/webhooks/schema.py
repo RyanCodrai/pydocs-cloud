@@ -7,9 +7,11 @@ from pydantic import BaseModel, BeforeValidator
 
 
 def parse_timestamp(value: str | datetime) -> datetime:
+    """Parse ISO timestamp to timezone-naive datetime."""
     if isinstance(value, datetime):
-        return value
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return value.replace(tzinfo=None)
+    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return dt.replace(tzinfo=None)
 
 
 class ReleaseWebhookPayload(BaseModel):

@@ -33,11 +33,14 @@ async def process_releases_webhook(
             commit=False,
         )
 
-        # Upsert package (don't set source_code so we don't overwrite existing data)
+        # Upsert package with description, home_page, and project_urls
         await package_service.upsert(
             data=PackageInput(
                 ecosystem=release.ecosystem,
                 package_name=release.name,
+                description=release.description,
+                home_page=release.home_page,
+                project_urls=release.project_urls,
                 first_seen=release.timestamp,
                 last_seen=release.timestamp,
             ),

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.routing import APIRoute, APIWebSocketRoute
 from src.routes.health import router as health_router
-from src.routes.v1 import router as user_router
+from src.routes.v1 import router as v1_router
 from src.settings import settings
 from src.utils.app_lifespan import lifespan
 from src.utils.logger import logger
@@ -27,7 +27,7 @@ def get_application() -> FastAPI:
     )
 
     # Collect all routes from all routers
-    routers = [health_router, user_router]
+    routers = [health_router, v1_router]
     routes = list(chain.from_iterable(router.routes for router in routers))
 
     # Validate that all routes have service type tags
@@ -59,7 +59,9 @@ def get_application() -> FastAPI:
         elif isinstance(route, APIWebSocketRoute):
             logger.info(f"WebSocket Route added: {route.path}")
 
-    logger.info(f"FastAPI application initialised with {len(filtered_routes)} routes for SERVICE_TYPE={settings.SERVICE_TYPE}")
+    logger.info(
+        f"FastAPI application initialised with {len(filtered_routes)} routes for SERVICE_TYPE={settings.SERVICE_TYPE}"
+    )
 
     app.add_middleware(
         CORSMiddleware,
