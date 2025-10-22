@@ -110,6 +110,7 @@ module "cloud_functions" {
   project_id             = local.project_id
   data_bucket_name       = module.storage.bucket_name
   cloud_tasks_queue_path = module.cloud_tasks.package_releases_queue_path
+  pypi_processor_url     = "${module.cloud_run.releases_api_url}/api/v1/webhooks/releases"
 
   depends_on = [
     google_project_service.required_apis["cloudfunctions.googleapis.com"],
@@ -117,7 +118,8 @@ module "cloud_functions" {
     google_project_service.required_apis["eventarc.googleapis.com"],
     google_project_service.required_apis["run.googleapis.com"],
     module.storage,
-    module.cloud_tasks
+    module.cloud_tasks,
+    module.cloud_run
   ]
 }
 
@@ -144,6 +146,13 @@ module "secrets" {
   ]
 }
 
+# Data source to get the latest image digest from Artifact Registry
+data "google_artifact_registry_docker_image" "api_image" {
+  location      = local.region
+  repository_id = "pydocs-images"
+  image_name    = "pydocs-api:latest"
+}
+
 # Cloud Run Module - API services
 module "cloud_run" {
   source = "./cloud_run"
@@ -151,7 +160,7 @@ module "cloud_run" {
   project_id                = local.project_id
   region                    = local.region
   environment               = local.environment
-  docker_image              = "${local.region}-docker.pkg.dev/${local.project_id}/pydocs-images/pydocs-api:latest"
+  docker_image              = data.google_artifact_registry_docker_image.api_image.self_link
   cloud_sql_connection_name = module.cloud_sql.instance_connection_name
 
   depends_on = [
