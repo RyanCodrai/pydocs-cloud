@@ -11,11 +11,12 @@ class ReleaseRepository:
     def __init__(self, db_session: AsyncSession) -> None:
         self.db_session = db_session
 
-    async def create(self, data: ReleaseInput) -> DBRelease:
+    async def create(self, data: ReleaseInput, commit: bool = True) -> DBRelease:
         release = DBRelease(**data.model_dump())
         self.db_session.add(release)
-        await self.db_session.commit()
-        await self.db_session.refresh(release)
+        if commit:
+            await self.db_session.commit()
+            await self.db_session.refresh(release)
         return release
 
     async def retrieve(self, release_id: UUID) -> DBRelease:
@@ -37,7 +38,7 @@ class ReleaseRepository:
         result = await self.db_session.exec(stmt)
         return list(result.scalars().all())
 
-    async def upsert(self, data: ReleaseInput) -> DBRelease:
+    async def upsert(self, data: ReleaseInput, commit: bool = True) -> DBRelease:
         stmt = (
             insert(DBRelease)
             .values(**data.model_dump())
@@ -52,5 +53,6 @@ class ReleaseRepository:
         )
 
         result = await self.db_session.exec(stmt)
-        await self.db_session.commit()
+        if commit:
+            await self.db_session.commit()
         return result.scalar_one()

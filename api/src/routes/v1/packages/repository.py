@@ -11,11 +11,12 @@ class PackageRepository:
     def __init__(self, db_session: AsyncSession) -> None:
         self.db_session = db_session
 
-    async def create(self, data: PackageInput) -> DBPackage:
+    async def create(self, data: PackageInput, commit: bool = True) -> DBPackage:
         package = DBPackage(**data.model_dump())
         self.db_session.add(package)
-        await self.db_session.commit()
-        await self.db_session.refresh(package)
+        if commit:
+            await self.db_session.commit()
+            await self.db_session.refresh(package)
         return package
 
     async def retrieve(self, package_id: UUID) -> DBPackage:
@@ -38,7 +39,7 @@ class PackageRepository:
         result = await self.db_session.exec(stmt)
         return list(result.scalars().all())
 
-    async def upsert(self, data: PackageInput) -> DBPackage:
+    async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
         stmt = (
             insert(DBPackage)
             .values(**data.model_dump())
@@ -56,5 +57,6 @@ class PackageRepository:
         )
 
         result = await self.db_session.exec(stmt)
-        await self.db_session.commit()
+        if commit:
+            await self.db_session.commit()
         return result.scalar_one()

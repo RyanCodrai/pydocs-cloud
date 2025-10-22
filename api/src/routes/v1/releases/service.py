@@ -35,9 +35,9 @@ class ReleaseService:
     def __init__(self, db_session: AsyncSession) -> None:
         self.repository = ReleaseRepository(db_session=db_session)
 
-    async def create(self, data: ReleaseInput) -> DBRelease:
+    async def create(self, data: ReleaseInput, commit: bool = True) -> DBRelease:
         try:
-            return await self.repository.create(data=data)
+            return await self.repository.create(data=data, commit=commit)
         except IntegrityError as exc:
             raise ReleaseAlreadyExists from exc
 
@@ -50,5 +50,5 @@ class ReleaseService:
     async def retrieve_by_package(self, ecosystem: str, package_name: str, limit: int | None = None) -> list[DBRelease]:
         return await self.repository.retrieve_by_package(ecosystem=ecosystem, package_name=package_name, limit=limit)
 
-    async def upsert(self, data: ReleaseInput) -> DBRelease:
-        return await self.repository.upsert(data=data)
+    async def upsert(self, data: ReleaseInput, commit: bool = True) -> DBRelease:
+        return await self.repository.upsert(data=data, commit=commit)

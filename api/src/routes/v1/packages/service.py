@@ -35,9 +35,9 @@ class PackageService:
     def __init__(self, db_session: AsyncSession) -> None:
         self.repository = PackageRepository(db_session=db_session)
 
-    async def create(self, data: PackageInput) -> DBPackage:
+    async def create(self, data: PackageInput, commit: bool = True) -> DBPackage:
         try:
-            return await self.repository.create(data=data)
+            return await self.repository.create(data=data, commit=commit)
         except IntegrityError as exc:
             raise PackageAlreadyExists from exc
 
@@ -56,5 +56,5 @@ class PackageService:
     async def retrieve_by_ecosystem(self, ecosystem: str, limit: int | None = None) -> list[DBPackage]:
         return await self.repository.retrieve_by_ecosystem(ecosystem=ecosystem, limit=limit)
 
-    async def upsert(self, data: PackageInput) -> DBPackage:
-        return await self.repository.upsert(data=data)
+    async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
+        return await self.repository.upsert(data=data, commit=commit)
