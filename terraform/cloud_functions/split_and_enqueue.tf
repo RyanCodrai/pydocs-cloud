@@ -33,7 +33,7 @@ resource "google_cloudfunctions2_function" "split_and_enqueue" {
   }
 
   service_config {
-    max_instance_count    = 10
+    max_instance_count    = 100
     available_memory      = "512Mi"
     timeout_seconds       = 540
     service_account_email = google_service_account.split_and_enqueue_sa.email
