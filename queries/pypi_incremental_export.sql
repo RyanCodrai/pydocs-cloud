@@ -14,19 +14,23 @@ SET last_processed_timestamp = COALESCE(
   TIMESTAMP('1990-01-01')  -- Fallback
 );
 
--- Create a temp table with new records
+-- Create a temp table with new records, grouped by package name and version
 CREATE TEMP TABLE new_pypi_records AS
 SELECT
   GENERATE_UUID() AS id,
   'pypi' AS ecosystem,
   name,
   version,
-  description,
-  home_page,
-  TO_JSON_STRING(project_urls) AS project_urls,
-  upload_time AS timestamp
+  -- Use ARRAY_AGG with ORDER BY to get the latest values
+  ARRAY_AGG(description ORDER BY upload_time DESC LIMIT 1)[OFFSET(0)] AS description,
+  ARRAY_AGG(home_page ORDER BY upload_time DESC LIMIT 1)[OFFSET(0)] AS home_page,
+  ARRAY_AGG(TO_JSON_STRING(project_urls) ORDER BY upload_time DESC LIMIT 1)[OFFSET(0)] AS project_urls,
+  -- Use MAX to get the latest upload_time for this package+version
+  MAX(upload_time) AS timestamp
 FROM `bigquery-public-data.pypi.distribution_metadata`
-WHERE upload_time > last_processed_timestamp;
+WHERE upload_time > last_processed_timestamp
+GROUP BY name, version
+ORDER BY name, version;
 
 -- Get count of records for export tracking
 SET record_count = (SELECT COUNT(*) FROM new_pypi_records);
