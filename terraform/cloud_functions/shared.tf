@@ -29,6 +29,13 @@ resource "google_project_iam_member" "cloudbuild_sa" {
   member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
 }
 
+# Grant Artifact Registry Writer role for pushing function images
+resource "google_project_iam_member" "cloudbuild_artifact_registry" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
 # Get GCS service account (this triggers its creation if it doesn't exist)
 data "google_storage_project_service_account" "gcs_account" {
   project = var.project_id

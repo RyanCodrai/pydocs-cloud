@@ -162,6 +162,7 @@ module "cloud_run" {
   environment               = local.environment
   docker_image              = data.google_artifact_registry_docker_image.api_image.self_link
   cloud_sql_connection_name = module.cloud_sql.instance_connection_name
+  data_bucket_name          = module.storage.bucket_name
 
   depends_on = [
     google_project_service.required_apis["run.googleapis.com"],
