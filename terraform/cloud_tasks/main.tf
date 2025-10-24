@@ -4,16 +4,16 @@ resource "google_cloud_tasks_queue" "package_releases" {
   location = var.region
 
   rate_limits {
-    max_dispatches_per_second = 500
-    max_concurrent_dispatches = 1000
+    max_dispatches_per_second = 150
+    max_concurrent_dispatches = 100
   }
 
   retry_config {
     max_attempts       = 100
-    max_retry_duration = "4s"
-    max_backoff        = "3s"
-    min_backoff        = "0.1s"
-    max_doublings      = 3
+    max_retry_duration = "604800s"  # 1 week (7 days * 24 hours * 60 minutes * 60 seconds)
+    max_backoff        = "3600s"     # 1 hour max backoff
+    min_backoff        = "1s"
+    max_doublings      = 5
   }
 
   stackdriver_logging_config {
