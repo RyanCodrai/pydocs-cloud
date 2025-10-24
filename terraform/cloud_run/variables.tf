@@ -25,3 +25,8 @@ variable "cloud_sql_connection_name" {
   description = "Cloud SQL connection name for VPC access"
   type        = string
 }
+
+variable "data_bucket_name" {
+  description = "GCS bucket name for data storage"
+  type        = string
+}

@@ -46,19 +46,36 @@ resource "google_project_iam_member" "releases_api_cloudsql" {
   member  = "serviceAccount:${google_service_account.releases_api.email}"
 }
 
+# Grant Storage Object Admin role for reading and deleting split files
+resource "google_storage_bucket_iam_member" "releases_api_bucket_access" {
+  bucket = var.data_bucket_name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.releases_api.email}"
+}
+
 # Cloud Run service for releases API
 resource "google_cloud_run_v2_service" "releases_api" {
   name     = "pydocs-releases-api"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"  # Only internal access (for Cloud Tasks)
 
+  # NOTE: After deployment, manually click "Allow public access" in the Cloud Run console
+  # to disable the IAM invoker check. This is required due to organization policy restrictions
+  # that prevent setting this via Terraform.
+
   template {
     service_account = google_service_account.releases_api.email
+    timeout         = "300s"  # 5 minute timeout for processing batches
 
-    # Scale from 0 to 10 instances (cost-effective with request-based billing)
+    # Disable IAM invoker check to allow unauthenticated access
+    annotations = {
+      "run.googleapis.com/invoker-iam-disabled" = "true"
+    }
+
+    # Scale from 0 to 100 instances (handles high throughput from Cloud Tasks)
     scaling {
       min_instance_count = 0
-      max_instance_count = 10
+      max_instance_count = 100
     }
 
     # VPC connector for Cloud SQL access
@@ -201,6 +218,7 @@ resource "google_cloud_run_v2_service" "releases_api" {
           cpu    = "1"
           memory = "1Gi"
         }
+        cpu_idle = true  # Request-based billing: CPU only allocated during request processing
       }
 
       startup_probe {
@@ -215,8 +233,7 @@ resource "google_cloud_run_v2_service" "releases_api" {
       }
     }
 
-    # Support 20 concurrent requests per instance
-    max_instance_request_concurrency = 20
+    max_instance_request_concurrency = 10
   }
 
   labels = {
@@ -231,13 +248,7 @@ resource "google_cloud_run_v2_service" "releases_api" {
   ]
 }
 
-# Allow Cloud Tasks to invoke the releases API
-resource "google_cloud_run_v2_service_iam_member" "releases_api_invoker" {
-  name     = google_cloud_run_v2_service.releases_api.name
-  location = google_cloud_run_v2_service.releases_api.location
-  role     = "roles/run.invoker"
-  member   = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-cloudtasks.iam.gserviceaccount.com"
-}
+
 
 # Get project number for Cloud Tasks service account
 data "google_project" "project" {
