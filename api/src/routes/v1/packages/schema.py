@@ -16,11 +16,3 @@ class PackageInput(BaseModel):
     source_code: str | None = None
     first_seen: Annotated[datetime, BeforeValidator(parse_timestamp)]
     last_seen: Annotated[datetime, BeforeValidator(parse_timestamp)]
-
-
-class PackageUpdate(BaseModel):
-    ecosystem: str | None = None
-    package_name: str | None = None
-    source_code: str | None = None
-    first_seen: datetime | None = None
-    last_seen: datetime | None = None
