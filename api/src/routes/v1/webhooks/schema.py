@@ -10,7 +10,9 @@ def parse_timestamp(value: str | datetime) -> datetime:
     """Parse ISO timestamp to timezone-naive datetime."""
     if isinstance(value, datetime):
         return value.replace(tzinfo=None)
-    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    # Remove ' UTC' suffix if present and replace 'Z' with '+00:00'
+    timestamp_str = value.replace(" UTC", "").replace("Z", "+00:00")
+    dt = datetime.fromisoformat(timestamp_str)
     return dt.replace(tzinfo=None)
 
 
