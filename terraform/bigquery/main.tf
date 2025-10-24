@@ -62,11 +62,11 @@ resource "google_bigquery_table" "exports" {
 
 # Scheduled Query: PyPI Releases Incremental Export
 resource "google_bigquery_data_transfer_config" "pypi_incremental_export" {
-  display_name           = "PyPI Releases Incremental Export"
-  location               = "US"
-  data_source_id         = "scheduled_query"
-  schedule               = "every 5 minutes"
-  destination_dataset_id = google_bigquery_dataset.exports_dataset.dataset_id
+  display_name   = "PyPI Releases Incremental Export"
+  location       = "US"
+  data_source_id = "scheduled_query"
+  schedule       = "every 5 minutes"
+
 
   params = {
     query = templatefile("${path.module}/../../queries/pypi_incremental_export.sql", {
