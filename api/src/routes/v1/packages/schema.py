@@ -12,7 +12,7 @@ class PackageInput(BaseModel):
     package_name: str
     description: str | None = None
     home_page: str | None = None
-    project_urls: str | None = None
+    project_urls: dict[str, str] = {}
     source_code: str | None = None
     first_seen: Annotated[datetime, BeforeValidator(parse_timestamp)]
     last_seen: Annotated[datetime, BeforeValidator(parse_timestamp)]

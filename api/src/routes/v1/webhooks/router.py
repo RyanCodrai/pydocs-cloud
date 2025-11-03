@@ -1,4 +1,5 @@
 import io
+import json
 import logging
 
 import numpy as np
@@ -62,8 +63,20 @@ async def process_releases_webhook(
                 first_seen=release_data["timestamp"],
                 last_seen=release_data["timestamp"],
             ),
-            commit=False,
+            commit=False,  # Don't commit the release yet, commit at the same time the package is upserted
         )
+
+        # Transform project_urls from array format ["Label, URL"] to dict {"Label": "URL"}
+        project_urls_dict = {}
+        project_urls_raw = release_data.get("project_urls", "[]")
+        for entry in json.loads(project_urls_raw):
+            if "," not in entry:
+                continue
+            key, value = entry.split(",", 1)
+            value = value.strip()
+            if not value:
+                continue
+            project_urls_dict[key.strip()] = value
 
         # Upsert package with description, home_page, and project_urls
         await package_service.upsert(
@@ -72,7 +85,7 @@ async def process_releases_webhook(
                 package_name=release_data["name"],
                 description=release_data.get("description"),
                 home_page=release_data.get("home_page"),
-                project_urls=release_data.get("project_urls"),
+                project_urls=project_urls_dict,
                 first_seen=release_data["timestamp"],
                 last_seen=release_data["timestamp"],
             ),
