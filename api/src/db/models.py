@@ -1,7 +1,8 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import Column, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 # class DBUser(SQLModel, table=True):
@@ -60,7 +61,7 @@ class DBPackage(SQLModel, table=True):
     package_name: str = Field(index=True)
     description: str | None = Field(default=None)
     home_page: str | None = Field(default=None)
-    project_urls: str | None = Field(default=None)  # JSON string
+    project_urls: dict[str, str] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False, server_default='{}'))
     source_code: str | None = Field(default=None)
     source_code_stars: int | None = Field(default=None)
     first_seen: datetime
