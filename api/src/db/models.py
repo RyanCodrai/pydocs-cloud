@@ -61,9 +61,10 @@ class DBPackage(SQLModel, table=True):
     package_name: str = Field(index=True)
     description: str | None = Field(default=None)
     home_page: str | None = Field(default=None)
-    project_urls: dict[str, str] = Field(default_factory=dict, sa_column=Column(JSONB, nullable=False, server_default='{}'))
+    project_urls: dict[str, str] = Field(
+        default_factory=dict, sa_column=Column(JSONB, nullable=False, server_default="{}")
+    )
     source_code: str | None = Field(default=None)
-    source_code_stars: int | None = Field(default=None)
     first_seen: datetime
     last_seen: datetime
 
