@@ -26,9 +26,11 @@ class GCSFilePayload(BaseModel):
     bucket_name: str
 
 
-def enqueue_candidate_extraction(ecosystem: str, package_name: str):
+def enqueue_candidate_extraction(packages: list[tuple[str, str]]):
     tasks_client = tasks_v2.CloudTasksClient()
-    payload = {"ecosystem": ecosystem, "package_name": package_name}
+    payload = {
+        "packages": [{"ecosystem": ecosystem, "package_name": package_name} for ecosystem, package_name in packages]
+    }
     tasks_client.create_task(
         request={
             "parent": settings.CANDIDATE_EXTRACTION_QUEUE_PATH,
@@ -114,8 +116,8 @@ async def process_releases_webhook(
             commit=True,
         )
 
-        # Enqueue package for candidate extraction
-        enqueue_candidate_extraction(release_data["ecosystem"], release_data["name"])
+    # Bulk enqueue packages for candidate extraction (single task with all packages)
+    enqueue_candidate_extraction([(release_data["ecosystem"], release_data["name"]) for release_data in releases_data])
 
     # Delete the file after successful processing
     blob.delete()
@@ -130,34 +132,36 @@ async def process_candidate_extraction_webhook(
     payload: CandidateExtractionPayload,
     package_service: PackageService = Depends(get_package_service),
 ) -> dict:
-    logger.info(f"Extracting candidates for {payload.ecosystem}/{payload.package_name}")
+    logger.info(f"Processing candidate extraction for {len(payload.packages)} packages")
 
-    # Fetch the package using the service
-    package = await package_service.retrieve_by_name(ecosystem=payload.ecosystem, package_name=payload.package_name)
+    for pkg in payload.packages:
+        # Fetch the package using the service
+        package = await package_service.retrieve_by_name(ecosystem=pkg.ecosystem, package_name=pkg.package_name)
 
-    # Skip if not in PENDING_EXTRACTION status
-    if package.status != PackageStatus.PENDING_EXTRACTION:
-        logger.info(f"Skipping {payload.package_name} - status is {package.status}, not PENDING_EXTRACTION")
-        return {"status": "skipped", "reason": f"status is {package.status}"}
+        # Skip if not in PENDING_EXTRACTION status
+        if package.status != PackageStatus.PENDING_EXTRACTION:
+            logger.info(f"Skipping {pkg.package_name} - status is {package.status}, not PENDING_EXTRACTION")
+            continue
 
-    # Merge homepage into project_urls for extraction
-    project_urls = package.project_urls.copy() if package.project_urls else {}
-    homepage = {"homepage_explicit": package.home_page} if package.home_page else {}
-    candidates = extract_github_candidates(package.description, {**project_urls, **homepage})
+        # Merge homepage into project_urls for extraction
+        project_urls = package.project_urls.copy() if package.project_urls else {}
+        homepage = {"homepage_explicit": package.home_page} if package.home_page else {}
+        candidates = extract_github_candidates(package.description, {**project_urls, **homepage})
 
-    # Upsert with updated candidates and status
-    await package_service.upsert(
-        data=PackageInput(
-            ecosystem=package.ecosystem,
-            package_name=package.package_name,
-            description=package.description,
-            home_page=package.home_page,
-            project_urls=package.project_urls,
-            source_code=package.source_code,
-            first_seen=package.first_seen,
-            last_seen=package.last_seen,
-            source_code_candidates=sorted(candidates),
-            status=PackageStatus.PENDING_MAPPING,
+        # Upsert with updated candidates and status
+        await package_service.upsert(
+            data=PackageInput(
+                ecosystem=package.ecosystem,
+                package_name=package.package_name,
+                description=package.description,
+                home_page=package.home_page,
+                project_urls=package.project_urls,
+                source_code=package.source_code,
+                first_seen=package.first_seen,
+                last_seen=package.last_seen,
+                source_code_candidates=sorted(candidates),
+                status=PackageStatus.PENDING_MAPPING,
+            )
         )
-    )
+
     return {"status": "success"}
