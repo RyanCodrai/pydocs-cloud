@@ -7,10 +7,13 @@ import pandas as pd
 from fastapi import APIRouter, Depends
 from google.cloud import storage
 from pydantic import BaseModel
+from src.db.models import PackageStatus
 from src.routes.v1.packages.schema import PackageInput
 from src.routes.v1.packages.service import PackageService, get_package_service
 from src.routes.v1.releases.schema import ReleaseInput
 from src.routes.v1.releases.service import ReleaseService, get_release_service
+from src.routes.v1.webhooks.schema import CandidateExtractionPayload
+from src.utils.github_extraction import extract_github_candidates
 from src.utils.service_tag import ServiceType, service_tag
 
 router = APIRouter()
@@ -95,4 +98,38 @@ async def process_releases_webhook(
     blob.delete()
     logger.info(f"Deleted processed file: {payload.file_path}")
 
+    return {"status": "success"}
+
+
+@service_tag(ServiceType.RELEASES)
+@router.post("/webhooks/candidate-extraction")
+async def process_candidate_extraction_webhook(
+    payload: CandidateExtractionPayload,
+    package_service: PackageService = Depends(get_package_service),
+) -> dict:
+    logger.info(f"Extracting candidates for {payload.ecosystem}/{payload.package_name}")
+
+    # Fetch the package using the service
+    package = await package_service.retrieve_by_name(ecosystem=payload.ecosystem, package_name=payload.package_name)
+
+    # Merge homepage into project_urls for extraction
+    project_urls = package.project_urls.copy() if package.project_urls else {}
+    homepage = {"homepage_explicit": package.home_page} if package.home_page else {}
+    candidates = extract_github_candidates(package.description, {**project_urls, **homepage})
+
+    # Upsert with updated candidates and status
+    await package_service.upsert(
+        data=PackageInput(
+            ecosystem=package.ecosystem,
+            package_name=package.package_name,
+            description=package.description,
+            home_page=package.home_page,
+            project_urls=package.project_urls,
+            source_code=package.source_code,
+            first_seen=package.first_seen,
+            last_seen=package.last_seen,
+            source_code_candidates=sorted(candidates),
+            status=PackageStatus.PENDING_MAPPING,
+        )
+    )
     return {"status": "success"}
