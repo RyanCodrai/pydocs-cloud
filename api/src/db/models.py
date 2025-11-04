@@ -77,16 +77,14 @@ class DBPackage(SQLModel, table=True):
     source_code: str | None = Field(default=None)
     first_seen: datetime
     last_seen: datetime
-
-    # New ranking column
-    pydocs_rank: int | None = Field(default=None, index=True, unique=True)
-
     # GitHub URL extraction pipeline fields
     source_code_candidates: list[str] = Field(
         default_factory=list, sa_column=Column(JSONB, nullable=False, server_default="[]")
     )
     status: PackageStatus = Field(
-        default=PackageStatus.PENDING_EXTRACTION, index=True, sa_column_kwargs={"server_default": text("'pending_extraction'")}
+        default=PackageStatus.PENDING_EXTRACTION,
+        index=True,
+        sa_column_kwargs={"server_default": text("'pending_extraction'")},
     )
 
     __table_args__ = (UniqueConstraint("ecosystem", "package_name", name="unique_package"),)
