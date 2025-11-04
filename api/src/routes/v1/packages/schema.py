@@ -17,5 +17,5 @@ class PackageInput(BaseModel):
     source_code: str | None = None
     first_seen: Annotated[datetime, BeforeValidator(parse_timestamp)]
     last_seen: Annotated[datetime, BeforeValidator(parse_timestamp)]
-    source_code_candidates: list[str] = []
-    status: PackageStatus = PackageStatus.PENDING_EXTRACTION
+    source_code_candidates: list[str] | None = None
+    status: PackageStatus | None = None
