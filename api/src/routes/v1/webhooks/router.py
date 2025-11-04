@@ -112,6 +112,7 @@ async def process_releases_webhook(
                 project_urls=project_urls_dict,
                 first_seen=release_data["timestamp"],
                 last_seen=release_data["timestamp"],
+                status=PackageStatus.PENDING_EXTRACTION,
             ),
             commit=True,
         )
