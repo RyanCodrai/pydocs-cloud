@@ -5,7 +5,7 @@ import logging
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter, Depends
-from google.cloud import storage
+from google.cloud import storage, tasks_v2
 from pydantic import BaseModel
 from src.db.models import PackageStatus
 from src.routes.v1.packages.schema import PackageInput
@@ -13,6 +13,7 @@ from src.routes.v1.packages.service import PackageService, get_package_service
 from src.routes.v1.releases.schema import ReleaseInput
 from src.routes.v1.releases.service import ReleaseService, get_release_service
 from src.routes.v1.webhooks.schema import CandidateExtractionPayload
+from src.settings import settings
 from src.utils.github_extraction import extract_github_candidates
 from src.utils.service_tag import ServiceType, service_tag
 
@@ -23,6 +24,24 @@ logger = logging.getLogger(__name__)
 class GCSFilePayload(BaseModel):
     file_path: str
     bucket_name: str
+
+
+def enqueue_candidate_extraction(ecosystem: str, package_name: str):
+    tasks_client = tasks_v2.CloudTasksClient()
+    payload = {"ecosystem": ecosystem, "package_name": package_name}
+    tasks_client.create_task(
+        request={
+            "parent": settings.CANDIDATE_EXTRACTION_QUEUE_PATH,
+            "task": {
+                "http_request": {
+                    "http_method": tasks_v2.HttpMethod.POST,
+                    "url": settings.CANDIDATE_EXTRACTION_URL,
+                    "headers": {"Content-Type": "application/json"},
+                    "body": json.dumps(payload).encode(),
+                }
+            },
+        }
+    )
 
 
 @service_tag(ServiceType.RELEASES)
@@ -94,6 +113,10 @@ async def process_releases_webhook(
             ),
             commit=True,
         )
+
+        # Enqueue package for candidate extraction
+        enqueue_candidate_extraction(release_data["ecosystem"], release_data["name"])
+
     # Delete the file after successful processing
     blob.delete()
     logger.info(f"Deleted processed file: {payload.file_path}")
