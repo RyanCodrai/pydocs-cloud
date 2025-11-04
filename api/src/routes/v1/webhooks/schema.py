@@ -27,6 +27,10 @@ class ReleaseWebhookPayload(BaseModel):
     timestamp: Annotated[datetime, BeforeValidator(parse_timestamp)]  # upload_time from BigQuery (ISO format string)
 
 
-class CandidateExtractionPayload(BaseModel):
+class PackageIdentifier(BaseModel):
     ecosystem: str  # Package ecosystem (e.g., 'pypi')
-    package_name: str  # Package name to extract candidates for
+    package_name: str  # Package name
+
+
+class CandidateExtractionPayload(BaseModel):
+    packages: list[PackageIdentifier]  # List of packages to extract candidates for
