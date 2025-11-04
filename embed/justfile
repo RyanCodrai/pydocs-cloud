@@ -1,0 +1,38 @@
+# PyDocs Embed Service - Development Commands
+# Install just: https://github.com/casey/just
+# Run `just` or `just --list` to see all commands
+
+# Default recipe shows help
+default:
+    @just --list
+
+# Build Docker image locally for testing
+build-local:
+    docker build -t pydocs-embed:local .
+
+# Run the embed service locally
+run-local:
+    docker run -p 8080:8080 pydocs-embed:local
+
+# Test the local service
+test-local:
+    @echo "Testing local embed service..."
+    curl -X POST http://localhost:8080/embeddings \
+      -H "Content-Type: application/json" \
+      -d '{"input": ["hello world", "test embedding"]}'
+
+# Deploy embed service to production (build + terraform apply)
+deploy-embed:
+    @echo "📦 Building and pushing Docker image to production..."
+    gcloud builds submit --config=cloudbuild.yaml --project=pydocs-prod
+    @echo "🚀 Deploying to Cloud Run via Terraform..."
+    cd ../terraform && terraform apply
+
+# View Cloud Run logs
+logs:
+    @echo "📋 Viewing service logs..."
+    gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=pydocs-embed-service" \
+      --project=pydocs-prod \
+      --limit=100 \
+      --format="table(timestamp,severity,textPayload)" \
+      --order=desc

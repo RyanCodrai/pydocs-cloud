@@ -1,0 +1,10 @@
+orjson
+
+fastapi
+uvicorn[standard]
+
+onnxruntime
+transformers
+numpy
+scikit-learn
+nltk
