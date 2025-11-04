@@ -35,3 +35,8 @@ variable "data_bucket_name" {
   description = "GCS bucket name for data storage"
   type        = string
 }
+
+variable "candidate_extraction_queue_path" {
+  description = "Cloud Tasks queue path for candidate extraction"
+  type        = string
+}

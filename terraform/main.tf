@@ -163,19 +163,21 @@ data "google_artifact_registry_docker_image" "embed_image" {
 module "cloud_run" {
   source = "./cloud_run"
 
-  project_id                = local.project_id
-  region                    = local.region
-  environment               = local.environment
-  docker_image              = data.google_artifact_registry_docker_image.api_image.self_link
-  embed_docker_image        = data.google_artifact_registry_docker_image.embed_image.self_link
-  cloud_sql_connection_name = module.cloud_sql.instance_connection_name
-  data_bucket_name          = module.storage.bucket_name
+  project_id                       = local.project_id
+  region                           = local.region
+  environment                      = local.environment
+  docker_image                     = data.google_artifact_registry_docker_image.api_image.self_link
+  embed_docker_image               = data.google_artifact_registry_docker_image.embed_image.self_link
+  cloud_sql_connection_name        = module.cloud_sql.instance_connection_name
+  data_bucket_name                 = module.storage.bucket_name
+  candidate_extraction_queue_path  = module.cloud_tasks.package_candidate_extraction_queue_path
 
   depends_on = [
     google_project_service.required_apis["run.googleapis.com"],
     google_project_service.required_apis["artifactregistry.googleapis.com"],
     module.cloud_sql,
-    module.secrets
+    module.secrets,
+    module.cloud_tasks
   ]
 }
 
