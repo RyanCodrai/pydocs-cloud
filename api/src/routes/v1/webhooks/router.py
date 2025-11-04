@@ -112,6 +112,11 @@ async def process_candidate_extraction_webhook(
     # Fetch the package using the service
     package = await package_service.retrieve_by_name(ecosystem=payload.ecosystem, package_name=payload.package_name)
 
+    # Skip if not in PENDING_EXTRACTION status
+    if package.status != PackageStatus.PENDING_EXTRACTION:
+        logger.info(f"Skipping {payload.package_name} - status is {package.status}, not PENDING_EXTRACTION")
+        return {"status": "skipped", "reason": f"status is {package.status}"}
+
     # Merge homepage into project_urls for extraction
     project_urls = package.project_urls.copy() if package.project_urls else {}
     homepage = {"homepage_explicit": package.home_page} if package.home_page else {}
