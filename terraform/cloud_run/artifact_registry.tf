@@ -27,3 +27,10 @@ resource "google_artifact_registry_repository_iam_member" "releases_api_reader" 
   role       = "roles/artifactregistry.reader"
   member     = "serviceAccount:${google_service_account.releases_api.email}"
 }
+
+resource "google_artifact_registry_repository_iam_member" "embed_service_reader" {
+  repository = google_artifact_registry_repository.docker_images.name
+  location   = google_artifact_registry_repository.docker_images.location
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${google_service_account.embed_service.email}"
+}

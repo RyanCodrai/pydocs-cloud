@@ -153,6 +153,12 @@ data "google_artifact_registry_docker_image" "api_image" {
   image_name    = "pydocs-api:latest"
 }
 
+data "google_artifact_registry_docker_image" "embed_image" {
+  location      = local.region
+  repository_id = "pydocs-images"
+  image_name    = "pydocs-embed:latest"
+}
+
 # Cloud Run Module - API services
 module "cloud_run" {
   source = "./cloud_run"
@@ -161,6 +167,7 @@ module "cloud_run" {
   region                    = local.region
   environment               = local.environment
   docker_image              = data.google_artifact_registry_docker_image.api_image.self_link
+  embed_docker_image        = data.google_artifact_registry_docker_image.embed_image.self_link
   cloud_sql_connection_name = module.cloud_sql.instance_connection_name
   data_bucket_name          = module.storage.bucket_name
 
