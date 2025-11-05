@@ -24,7 +24,7 @@ class PackageRepository:
         result = await self.db_session.exec(stmt)
         return result.scalar_one()
 
-    async def retrieve_by_name(self, ecosystem: str, package_name: str) -> DBPackage:
+    async def retrieve_by_ecosystem_and_name(self, ecosystem: str, package_name: str) -> DBPackage:
         stmt = select(DBPackage).where(
             DBPackage.ecosystem == ecosystem,
             DBPackage.package_name == package_name,

@@ -47,9 +47,9 @@ class PackageService:
         except NoResultFound as exc:
             raise PackageNotFound from exc
 
-    async def retrieve_by_name(self, ecosystem: str, package_name: str) -> DBPackage:
+    async def retrieve_by_ecosystem_and_name(self, ecosystem: str, package_name: str) -> DBPackage:
         try:
-            return await self.repository.retrieve_by_name(ecosystem=ecosystem, package_name=package_name)
+            return await self.repository.retrieve_by_ecosystem_and_name(ecosystem=ecosystem, package_name=package_name)
         except NoResultFound as exc:
             raise PackageNotFound from exc
 

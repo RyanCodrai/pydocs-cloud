@@ -137,7 +137,7 @@ async def process_candidate_extraction_webhook(
 
     for pkg in payload.packages:
         # Fetch the package using the service
-        package = await package_service.retrieve_by_name(ecosystem=pkg.ecosystem, package_name=pkg.package_name)
+        package = await package_service.retrieve_by_ecosystem_and_name(ecosystem=pkg.ecosystem, package_name=pkg.package_name)
 
         # Skip if not in PENDING_EXTRACTION status
         if package.status != PackageStatus.PENDING_EXTRACTION:
