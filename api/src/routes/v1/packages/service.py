@@ -53,8 +53,5 @@ class PackageService:
         except NoResultFound as exc:
             raise PackageNotFound from exc
 
-    async def retrieve_by_ecosystem(self, ecosystem: str, limit: int | None = None) -> list[DBPackage]:
-        return await self.repository.retrieve_by_ecosystem(ecosystem=ecosystem, limit=limit)
-
     async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
         return await self.repository.upsert(data=data, commit=commit)

@@ -32,13 +32,6 @@ class PackageRepository:
         result = await self.db_session.exec(stmt)
         return result.scalar_one()
 
-    async def retrieve_by_ecosystem(self, ecosystem: str, limit: int | None = None) -> list[DBPackage]:
-        stmt = select(DBPackage).where(DBPackage.ecosystem == ecosystem).order_by(DBPackage.first_seen.desc())
-        if limit is not None:
-            stmt = stmt.limit(limit)
-        result = await self.db_session.exec(stmt)
-        return list(result.scalars().all())
-
     async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
         # Build the update set dynamically, excluding unset fields and unique keys
         update_dict = data.model_dump(exclude_unset=True, exclude={"ecosystem", "package_name"})
