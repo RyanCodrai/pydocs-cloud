@@ -20,6 +20,7 @@ dependencies = [
     # Cloud Services
     "google-cloud-logging",
     "google-cloud-storage",
+    "google-cloud-tasks",
 
     # Security & Authentication
     "pyjwt",
