@@ -228,7 +228,7 @@ resource "google_cloud_run_v2_service" "releases_api" {
 
       env {
         name  = "CANDIDATE_EXTRACTION_URL"
-        value = "${google_cloud_run_v2_service.releases_api.uri}/api/v1/webhooks/candidate-extraction"
+        value = "https://pydocs-releases-api-${data.google_project.project.number}.${var.region}.run.app/api/v1/webhooks/candidate-extraction"
       }
 
       resources {
