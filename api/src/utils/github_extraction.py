@@ -81,12 +81,15 @@ def filter_out_reserved_paths(source_urls: list[str]) -> list[str]:
     return valid_repos
 
 
-def extract_github_candidates(description: str | None, project_urls: dict[str, str]) -> list[str]:
+def extract_github_candidates(
+    description: str | None, project_urls: dict[str, str], home_page: str | None = None
+) -> list[str]:
     # Extract URLs from description
     url_pattern = r"(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])"
     description_urls = re.findall(url_pattern, description or "", re.IGNORECASE)
-    # Extract URLs from project_urls
+    # Extract URLs from project_urls and home_page
     all_urls = description_urls + list(project_urls.values())
+    all_urls += [home_page] if home_page else []
     # Filter out URLs that are not GitHub URLs
     source_code_urls = [url for url in all_urls if "github.com" in url]
     # Extract repository path from GitHub URLs
