@@ -10,15 +10,6 @@ output "releases_api_service_account" {
   value       = google_service_account.releases_api.email
 }
 
-output "embed_service_url" {
-  description = "URL of the embed service Cloud Run service"
-  value       = google_cloud_run_v2_service.embed_service.uri
-}
-
-output "embed_service_account" {
-  description = "Service account email for embed service"
-  value       = google_service_account.embed_service.email
-}
 
 output "artifact_registry_url" {
   description = "URL for the Artifact Registry repository"

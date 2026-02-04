@@ -1,18 +1,9 @@
 from datetime import datetime
-from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, UniqueConstraint, text
+from sqlalchemy import Column, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
-
-
-class PackageStatus(str, Enum):
-    """Status enum for package processing pipeline"""
-
-    PENDING_EXTRACTION = "pending_extraction"  # Needs GitHub URL extraction
-    PENDING_MAPPING = "pending_mapping"  # URLs changed, needs mapping
-    MAPPED = "mapped"  # Successfully mapped to GitHub repo
 
 
 # class DBUser(SQLModel, table=True):
@@ -80,11 +71,6 @@ class DBPackage(SQLModel, table=True):
     # GitHub URL extraction pipeline fields
     source_code_candidates: list[str] = Field(
         default_factory=list, sa_column=Column(JSONB, nullable=False, server_default="[]")
-    )
-    status: PackageStatus = Field(
-        default=PackageStatus.PENDING_EXTRACTION,
-        index=True,
-        sa_column_kwargs={"server_default": text("'pending_extraction'")},
     )
 
     __table_args__ = (UniqueConstraint("ecosystem", "package_name", name="unique_package"),)

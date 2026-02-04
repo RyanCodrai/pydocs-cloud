@@ -71,3 +71,6 @@ service-account-key.json
 **/terraform.tfvars
 **/.terraform.lock.hcl
 .terraform/tmp/
+
+# Embeddings
+qwen-0.6b-int8/

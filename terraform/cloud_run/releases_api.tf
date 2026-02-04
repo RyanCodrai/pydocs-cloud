@@ -53,12 +53,6 @@ resource "google_storage_bucket_iam_member" "releases_api_bucket_access" {
   member = "serviceAccount:${google_service_account.releases_api.email}"
 }
 
-# Grant Cloud Tasks Enqueuer role for enqueueing candidate extraction tasks
-resource "google_project_iam_member" "releases_api_tasks_enqueuer" {
-  project = var.project_id
-  role    = "roles/cloudtasks.enqueuer"
-  member  = "serviceAccount:${google_service_account.releases_api.email}"
-}
 
 # Cloud Run service for releases API
 resource "google_cloud_run_v2_service" "releases_api" {
@@ -220,16 +214,6 @@ resource "google_cloud_run_v2_service" "releases_api" {
         }
       }
 
-      # Cloud Tasks configuration
-      env {
-        name  = "CANDIDATE_EXTRACTION_QUEUE_PATH"
-        value = var.candidate_extraction_queue_path
-      }
-
-      env {
-        name  = "CANDIDATE_EXTRACTION_URL"
-        value = "https://pydocs-releases-api-${data.google_project.project.number}.${var.region}.run.app/api/v1/webhooks/candidate-extraction"
-      }
 
       resources {
         limits = {

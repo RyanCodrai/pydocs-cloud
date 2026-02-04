@@ -25,12 +25,3 @@ class ReleaseWebhookPayload(BaseModel):
     home_page: str | None  # Homepage URL
     project_urls: str | None  # JSON string of project URLs
     timestamp: Annotated[datetime, BeforeValidator(parse_timestamp)]  # upload_time from BigQuery (ISO format string)
-
-
-class PackageIdentifier(BaseModel):
-    ecosystem: str  # Package ecosystem (e.g., 'pypi')
-    package_name: str  # Package name
-
-
-class CandidateExtractionPayload(BaseModel):
-    packages: list[PackageIdentifier]  # List of packages to extract candidates for

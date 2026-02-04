@@ -5,16 +5,12 @@ import logging
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter, Depends
-from google.cloud import storage, tasks_v2
+from google.cloud import storage
 from pydantic import BaseModel
-from src.db.models import PackageStatus
 from src.routes.v1.packages.schema import PackageInput
 from src.routes.v1.packages.service import PackageService, get_package_service
 from src.routes.v1.releases.schema import ReleaseInput
 from src.routes.v1.releases.service import ReleaseService, get_release_service
-from src.routes.v1.webhooks.schema import CandidateExtractionPayload
-from src.settings import settings
-from src.utils.github_extraction import extract_github_candidates
 from src.utils.service_tag import ServiceType, service_tag
 
 router = APIRouter()
@@ -24,26 +20,6 @@ logger = logging.getLogger(__name__)
 class GCSFilePayload(BaseModel):
     file_path: str
     bucket_name: str
-
-
-def enqueue_candidate_extraction(packages: list[tuple[str, str]]):
-    tasks_client = tasks_v2.CloudTasksClient()
-    payload = {
-        "packages": [{"ecosystem": ecosystem, "package_name": package_name} for ecosystem, package_name in packages]
-    }
-    tasks_client.create_task(
-        request={
-            "parent": settings.CANDIDATE_EXTRACTION_QUEUE_PATH,
-            "task": {
-                "http_request": {
-                    "http_method": tasks_v2.HttpMethod.POST,
-                    "url": settings.CANDIDATE_EXTRACTION_URL,
-                    "headers": {"Content-Type": "application/json"},
-                    "body": json.dumps(payload).encode(),
-                }
-            },
-        }
-    )
 
 
 @service_tag(ServiceType.RELEASES)
@@ -112,57 +88,12 @@ async def process_releases_webhook(
                 project_urls=project_urls_dict,
                 first_seen=release_data["timestamp"],
                 last_seen=release_data["timestamp"],
-                status=PackageStatus.PENDING_EXTRACTION,
             ),
             commit=True,
         )
 
-    # Bulk enqueue packages for candidate extraction (single task with all packages)
-    enqueue_candidate_extraction([(release_data["ecosystem"], release_data["name"]) for release_data in releases_data])
-
     # Delete the file after successful processing
     blob.delete()
     logger.info(f"Deleted processed file: {payload.file_path}")
-
-    return {"status": "success"}
-
-
-@service_tag(ServiceType.RELEASES)
-@router.post("/webhooks/candidate-extraction")
-async def process_candidate_extraction_webhook(
-    payload: CandidateExtractionPayload,
-    package_service: PackageService = Depends(get_package_service),
-) -> dict:
-    logger.info(f"Processing candidate extraction for {len(payload.packages)} packages")
-
-    for pkg in payload.packages:
-        # Fetch the package using the service
-        package = await package_service.retrieve_by_ecosystem_and_name(ecosystem=pkg.ecosystem, package_name=pkg.package_name)
-
-        # Skip if not in PENDING_EXTRACTION status
-        if package.status != PackageStatus.PENDING_EXTRACTION:
-            logger.info(f"Skipping {pkg.package_name} - status is {package.status}, not PENDING_EXTRACTION")
-            continue
-
-        # Merge homepage into project_urls for extraction
-        project_urls = package.project_urls.copy() if package.project_urls else {}
-        homepage = {"homepage_explicit": package.home_page} if package.home_page else {}
-        candidates = extract_github_candidates(package.description, {**project_urls, **homepage})
-
-        # Upsert with updated candidates and status
-        await package_service.upsert(
-            data=PackageInput(
-                ecosystem=package.ecosystem,
-                package_name=package.package_name,
-                description=package.description,
-                home_page=package.home_page,
-                project_urls=package.project_urls,
-                source_code=package.source_code,
-                first_seen=package.first_seen,
-                last_seen=package.last_seen,
-                source_code_candidates=sorted(candidates),
-                status=PackageStatus.PENDING_MAPPING,
-            )
-        )
 
     return {"status": "success"}

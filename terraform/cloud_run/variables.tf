@@ -21,10 +21,6 @@ variable "docker_image" {
   type        = string
 }
 
-variable "embed_docker_image" {
-  description = "Docker image URL for the embed service (e.g., gcr.io/project/image:tag)"
-  type        = string
-}
 
 variable "cloud_sql_connection_name" {
   description = "Cloud SQL connection name for VPC access"
@@ -36,7 +32,3 @@ variable "data_bucket_name" {
   type        = string
 }
 
-variable "candidate_extraction_queue_path" {
-  description = "Cloud Tasks queue path for candidate extraction"
-  type        = string
-}

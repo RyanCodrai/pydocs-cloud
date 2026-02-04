@@ -27,10 +27,6 @@ class Settings(BaseSettings):
     AUTH0_ISSUER: Optional[str] = None
     AUTH0_ALGORITHMS: Optional[str] = None
 
-    # Cloud Tasks Configuration
-    CANDIDATE_EXTRACTION_QUEUE_PATH: Optional[str] = None
-    CANDIDATE_EXTRACTION_URL: Optional[str] = None
-
     @property
     def DATABASE_URL(self) -> URL:
         return URL.create(
