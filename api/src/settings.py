@@ -28,7 +28,6 @@ class Settings(BaseSettings):
     AUTH0_ALGORITHMS: Optional[str] = None
 
     # External API Keys
-    GOOGLE_API_KEY: Optional[str] = None
     GITHUB_TOKEN: Optional[str] = None
 
     @property
