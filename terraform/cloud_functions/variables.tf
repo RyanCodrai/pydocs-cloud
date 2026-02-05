@@ -26,3 +26,9 @@ variable "pypi_processor_url" {
   type        = string
   default     = "https://pypi-processor-PLACEHOLDER.run.app"
 }
+
+variable "npm_processor_url" {
+  description = "Cloud Run URL for processing npm releases"
+  type        = string
+  default     = ""
+}

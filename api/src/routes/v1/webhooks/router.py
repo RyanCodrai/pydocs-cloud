@@ -68,7 +68,7 @@ async def process_releases_webhook(
 
         # Transform project_urls from array format ["Label, URL"] to dict {"Label": "URL"}
         project_urls_dict = {}
-        project_urls_raw = release_data.get("project_urls", "[]")
+        project_urls_raw = release_data.get("project_urls") or "[]"
         for entry in json.loads(project_urls_raw):
             if "," not in entry:
                 continue

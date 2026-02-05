@@ -48,6 +48,7 @@ locals {
     "secretmanager.googleapis.com",
     "servicenetworking.googleapis.com",
     "artifactregistry.googleapis.com",
+    "cloudscheduler.googleapis.com",
   ]
 }
 
@@ -111,12 +112,14 @@ module "cloud_functions" {
   data_bucket_name       = module.storage.bucket_name
   cloud_tasks_queue_path = module.cloud_tasks.package_releases_queue_path
   pypi_processor_url     = "${module.cloud_run.releases_api_url}/api/v1/webhooks/releases"
+  npm_processor_url      = "${module.cloud_run.releases_api_url}/api/v1/webhooks/releases"
 
   depends_on = [
     google_project_service.required_apis["cloudfunctions.googleapis.com"],
     google_project_service.required_apis["cloudbuild.googleapis.com"],
     google_project_service.required_apis["eventarc.googleapis.com"],
     google_project_service.required_apis["run.googleapis.com"],
+    google_project_service.required_apis["cloudscheduler.googleapis.com"],
     module.storage,
     module.cloud_tasks,
     module.cloud_run

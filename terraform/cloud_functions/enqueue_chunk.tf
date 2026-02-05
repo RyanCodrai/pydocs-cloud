@@ -41,6 +41,7 @@ resource "google_cloudfunctions2_function" "enqueue_chunk" {
     environment_variables = {
       QUEUE_PATH         = var.cloud_tasks_queue_path
       PYPI_PROCESSOR_URL = var.pypi_processor_url
+      NPM_PROCESSOR_URL  = var.npm_processor_url
     }
   }
 

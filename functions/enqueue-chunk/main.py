@@ -14,14 +14,16 @@ logger = logging.getLogger(__name__)
 class Settings(BaseSettings):
     QUEUE_PATH: str
     PYPI_PROCESSOR_URL: str
+    NPM_PROCESSOR_URL: str = ""
 
     @property
     def PROCESSOR_URLS(self):
-        return {
+        urls = {
             "pypi": self.PYPI_PROCESSOR_URL,
-            # Add more ecosystems as needed:
-            # 'npm': self.NPM_PROCESSOR_URL,
         }
+        if self.NPM_PROCESSOR_URL:
+            urls["npm"] = self.NPM_PROCESSOR_URL
+        return urls
 
     def get_processor_url(self, ecosystem):
         processor_url = self.PROCESSOR_URLS.get(ecosystem)
@@ -38,14 +40,14 @@ def extract_ecosystem_from_path(file_path):
     return Path(file_path).parts[1]
 
 
-def create_cloud_task(client, file_path, bucket_name):
+def create_cloud_task(client, file_path, bucket_name, processor_url):
     """Create a Cloud Task with GCS file path instead of release data."""
     payload = {"file_path": file_path, "bucket_name": bucket_name}
 
     task = {
         "http_request": {
             "http_method": tasks_v2.HttpMethod.POST,
-            "url": settings.PYPI_PROCESSOR_URL,
+            "url": processor_url,
             "headers": {
                 "Content-Type": "application/json",
             },
@@ -68,11 +70,13 @@ def enqueue_chunk(cloud_event):
         logger.info(f"Ignoring file outside releases-split/: {file_name}")
         return {"status": "ignored", "reason": "not in releases-split/"}
 
-    logger.info(f"Enqueueing task for split file: {file_name}")
+    ecosystem = extract_ecosystem_from_path(file_name)
+    processor_url = settings.get_processor_url(ecosystem)
+    logger.info(f"Enqueueing task for {ecosystem} split file: {file_name}")
 
     # Create a single Cloud Task with the GCS file path
     tasks_client = tasks_v2.CloudTasksClient()
-    create_cloud_task(tasks_client, file_name, bucket_name)
+    create_cloud_task(tasks_client, file_name, bucket_name, processor_url)
 
     logger.info(f"✅ Enqueued task for split file: {file_name}")
 

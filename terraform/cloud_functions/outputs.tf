@@ -37,3 +37,18 @@ output "split_and_upload_service_account_email" {
   description = "Service account email for the split and upload function"
   value       = google_service_account.split_and_upload_sa.email
 }
+
+output "npm_sync_function_name" {
+  description = "Name of the npm sync Cloud Function"
+  value       = google_cloudfunctions2_function.npm_sync.name
+}
+
+output "npm_sync_function_url" {
+  description = "URL of the npm sync Cloud Function"
+  value       = google_cloudfunctions2_function.npm_sync.service_config[0].uri
+}
+
+output "npm_sync_service_account_email" {
+  description = "Service account email for the npm sync function"
+  value       = google_service_account.npm_sync_sa.email
+}
