@@ -1,5 +1,5 @@
 import numpy as np
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from src.routes.v1.packages.service import PackageService, get_package_service
 from src.utils.embeddings import embed_text
@@ -10,13 +10,8 @@ from src.utils.service_tag import ServiceType, service_tag
 router = APIRouter()
 
 
-class ScoredRepo(BaseModel):
-    url: str
-    score: float
-
-
 class LookupResponse(BaseModel):
-    github_urls: list[ScoredRepo]
+    github_url: str
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -31,21 +26,12 @@ async def find_github_repos(
     home_page: str | None,
 ) -> list[tuple[str, float]]:
     """Find and rank GitHub repositories from package metadata."""
-    candidates = extract_github_candidates(
-        description=description, project_urls=project_urls, home_page=home_page
-    )
+    candidates = extract_github_candidates(description=description, project_urls=project_urls, home_page=home_page)
 
     if not candidates:
         return []
 
     repos_with_readmes = await get_readmes_for_repos(candidates)
-
-    if not repos_with_readmes:
-        return [(url, 0.0) for url in sorted(candidates)]
-
-    if not description:
-        return [(url, 0.0) for url, _ in repos_with_readmes]
-
     description_embedding = await embed_text(description)
 
     scored_repos = []
@@ -66,11 +52,10 @@ async def lookup_github_urls(
 ) -> LookupResponse:
     """Look up GitHub repository URLs for a package, ranked by similarity."""
     package = await package_service.retrieve_by_ecosystem_and_name(ecosystem="pypi", package_name=package_name)
-
     scored_repos = await find_github_repos(
-        description=package.description,
-        project_urls=package.project_urls,
-        home_page=package.home_page,
+        description=package.description, project_urls=package.project_urls, home_page=package.home_page
     )
-
-    return LookupResponse(github_urls=[ScoredRepo(url=url, score=score) for url, score in scored_repos])
+    if not scored_repos:
+        raise HTTPException(status_code=404, detail="No GitHub repository found")
+    best_url, _ = scored_repos[0]
+    return LookupResponse(github_url=best_url)
