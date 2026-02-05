@@ -140,6 +140,9 @@ module "secrets" {
   postgres_host     = module.cloud_sql.private_ip_address
   postgres_port     = module.cloud_sql.database_port
 
+  # External API keys
+  github_token = var.github_token
+
   depends_on = [
     google_project_service.required_apis["secretmanager.googleapis.com"],
     module.cloud_sql

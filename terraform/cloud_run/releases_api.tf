@@ -32,6 +32,7 @@ resource "google_secret_manager_secret_iam_member" "releases_api_secrets" {
     "auth0-issuer",
     "auth0-client-id",
     "auth0-algorithms",
+    "github-token",
   ])
 
   secret_id = each.value
@@ -43,6 +44,13 @@ resource "google_secret_manager_secret_iam_member" "releases_api_secrets" {
 resource "google_project_iam_member" "releases_api_cloudsql" {
   project = var.project_id
   role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.releases_api.email}"
+}
+
+# Grant Vertex AI User role for embeddings
+resource "google_project_iam_member" "releases_api_vertex_ai" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
   member  = "serviceAccount:${google_service_account.releases_api.email}"
 }
 
@@ -99,6 +107,17 @@ resource "google_cloud_run_v2_service" "releases_api" {
       env {
         name  = "SERVICE_TYPE"
         value = "releases"
+      }
+
+      # Vertex AI configuration for embeddings
+      env {
+        name  = "GOOGLE_CLOUD_PROJECT"
+        value = var.project_id
+      }
+
+      env {
+        name  = "GOOGLE_CLOUD_LOCATION"
+        value = var.region
       }
 
       # Environment configuration
@@ -214,6 +233,16 @@ resource "google_cloud_run_v2_service" "releases_api" {
         }
       }
 
+      # External API keys
+      env {
+        name = "GITHUB_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret  = "github-token"
+            version = "latest"
+          }
+        }
+      }
 
       resources {
         limits = {

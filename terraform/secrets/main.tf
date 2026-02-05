@@ -180,6 +180,27 @@ resource "google_secret_manager_secret" "auth0_algorithms" {
   }
 }
 
+# External API Keys
+resource "google_secret_manager_secret" "github_token" {
+  secret_id = "github-token"
+
+  replication {
+    auto {}
+  }
+
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+    category    = "api-keys"
+  }
+}
+
+resource "google_secret_manager_secret_version" "github_token" {
+  secret      = google_secret_manager_secret.github_token.id
+  secret_data = var.github_token
+}
+
+
 # Grant Cloud Run service account access to all secrets
 locals {
   secrets = {
@@ -194,6 +215,7 @@ locals {
     auth0-issuer         = google_secret_manager_secret.auth0_issuer.id
     auth0-client-id      = google_secret_manager_secret.auth0_client_id.id
     auth0-algorithms     = google_secret_manager_secret.auth0_algorithms.id
+    github-token         = google_secret_manager_secret.github_token.id
   }
 }
 
