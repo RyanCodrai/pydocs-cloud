@@ -21,6 +21,8 @@ dependencies = [
     "google-cloud-logging",
     "google-cloud-storage",
     "google-cloud-tasks",
+    "gcloud-aio-storage",
+    "google-auth",
 
     # Security & Authentication
     "pyjwt",
