@@ -25,9 +25,10 @@ async def get_github_readme(repo_url: str) -> str | None:
 
     async with aiohttp.ClientSession() as session:
         async with session.get(readme_api_url, headers=headers) as response:
-            if response.status == 200:
-                return await response.text()
-            return None
+            if response.status == 404:
+                return None  # No README
+            response.raise_for_status()
+            return await response.text()
 
 
 async def get_readmes_for_repos(repo_urls: list[str]) -> list[tuple[str, str]]:
