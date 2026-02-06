@@ -14,7 +14,6 @@ deployed with SERVICE_TYPE=npm_sync.
 """
 
 import asyncio
-import json
 import logging
 from datetime import datetime, timezone
 
@@ -22,7 +21,7 @@ import aiohttp
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.db.models import DBPackage, DBRelease, DBSyncState
+from src.db.models import DBNpmPackage, DBNpmRelease, DBSyncState
 from src.db.operations import managed_session
 from src.settings import settings
 
@@ -123,53 +122,72 @@ async def fetch_packument(http_session: aiohttp.ClientSession, package_name: str
     return None
 
 
-def extract_project_urls(packument: dict) -> dict[str, str]:
+def clean_repository_url(packument: dict) -> str | None:
     """
-    Extract URLs from an npm packument and return as a dict.
+    Extract and clean the repository URL from a packument.
 
-    npm packages store URLs in:
-    - repository: {type: "git", url: "git+https://github.com/user/repo.git"}
-    - homepage: "https://example.com"
-    - bugs: {url: "https://github.com/user/repo/issues"}
+    Handles the various formats npm packages use:
+    - {type: "git", url: "git+https://github.com/user/repo.git"}
+    - "github:user/repo"
+    - "user/repo"
     """
-    urls = {}
-
     repository = packument.get("repository")
     if isinstance(repository, dict):
         repo_url = repository.get("url", "")
-        repo_url = repo_url.removeprefix("git+").removeprefix("git://")
-        repo_url = repo_url.removesuffix(".git")
-        if repo_url.startswith("git@github.com:"):
-            repo_url = repo_url.replace("git@github.com:", "https://github.com/")
-        if repo_url:
-            urls["Repository"] = repo_url
     elif isinstance(repository, str):
         repo_url = repository
-        if repo_url.startswith("github:"):
-            repo_url = f"https://github.com/{repo_url.removeprefix('github:')}"
-        elif "/" in repo_url and not repo_url.startswith("http"):
-            repo_url = f"https://github.com/{repo_url}"
-        if repo_url:
-            urls["Repository"] = repo_url
+    else:
+        return None
 
-    homepage = packument.get("homepage")
-    if homepage and isinstance(homepage, str):
-        urls["Homepage"] = homepage
+    if not repo_url:
+        return None
 
+    # Clean git+ prefix and .git suffix
+    repo_url = repo_url.removeprefix("git+").removeprefix("git://")
+    repo_url = repo_url.removesuffix(".git")
+
+    # Convert ssh URLs to https
+    if repo_url.startswith("git@github.com:"):
+        repo_url = repo_url.replace("git@github.com:", "https://github.com/")
+
+    # Convert shorthand formats
+    if repo_url.startswith("github:"):
+        repo_url = f"https://github.com/{repo_url.removeprefix('github:')}"
+    elif "/" in repo_url and not repo_url.startswith("http"):
+        repo_url = f"https://github.com/{repo_url}"
+
+    return repo_url
+
+
+def extract_bugs_url(packument: dict) -> str | None:
+    """Extract the bugs/issues URL from a packument."""
     bugs = packument.get("bugs")
     if isinstance(bugs, dict):
-        bugs_url = bugs.get("url", "")
-        if bugs_url:
-            urls["Bug Tracker"] = bugs_url
-    elif isinstance(bugs, str):
-        urls["Bug Tracker"] = bugs
+        return bugs.get("url") or None
+    if isinstance(bugs, str):
+        return bugs
+    return None
 
-    return urls
+
+def extract_author_name(packument: dict) -> str | None:
+    """Extract the author name from a packument."""
+    author = packument.get("author")
+    if isinstance(author, dict):
+        return author.get("name")
+    if isinstance(author, str):
+        return author
+    return None
+
+
+def parse_npm_timestamp(ts: str) -> datetime:
+    """Parse an npm ISO timestamp like '2018-04-17T04:25:41.199Z' to naive datetime."""
+    return datetime.fromisoformat(ts.replace("Z", "+00:00")).replace(tzinfo=None)
 
 
 async def process_packument(session: AsyncSession, packument: dict):
     """
-    Process a single packument: upsert all its releases and the package record.
+    Process a single packument: upsert all its releases and the package record
+    into the npm-specific tables.
     """
     name = packument.get("name")
     if not name:
@@ -177,77 +195,70 @@ async def process_packument(session: AsyncSession, packument: dict):
 
     versions = packument.get("versions", {})
     time_map = packument.get("time", {})
-    description = packument.get("description")
-    homepage = packument.get("homepage")
-    project_urls = extract_project_urls(packument)
 
+    # -- Upsert releases --
     release_count = 0
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     for version_str in versions:
         timestamp_str = time_map.get(version_str)
         if not timestamp_str:
             continue
 
-        timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00")).replace(tzinfo=None)
+        published_at = parse_npm_timestamp(timestamp_str)
 
-        # Upsert release
-        release_stmt = (
-            insert(DBRelease)
+        stmt = (
+            insert(DBNpmRelease)
             .values(
-                ecosystem="npm",
                 package_name=name,
                 version=version_str,
-                first_seen=timestamp,
-                last_seen=timestamp,
+                published_at=published_at,
+                first_seen=now,
+                last_seen=now,
             )
             .on_conflict_do_update(
-                constraint="unique_release",
+                constraint="unique_npm_release",
                 set_={
-                    "first_seen": func.least(DBRelease.first_seen, timestamp),
-                    "last_seen": func.greatest(DBRelease.last_seen, timestamp),
+                    "published_at": published_at,
+                    "last_seen": now,
                 },
             )
         )
-        await session.exec(release_stmt)
+        await session.exec(stmt)
         release_count += 1
 
-    # Determine first_seen and last_seen from the time map
-    version_times = [
-        datetime.fromisoformat(t.replace("Z", "+00:00")).replace(tzinfo=None)
-        for v, t in time_map.items()
-        if v in versions
-    ]
+    # -- Upsert package --
+    dist_tags = packument.get("dist-tags", {})
 
-    if version_times:
-        first_seen = min(version_times)
-        last_seen = max(version_times)
-    else:
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        first_seen = now
-        last_seen = now
-
-    # Upsert package
-    package_data = {
-        "ecosystem": "npm",
-        "package_name": name,
-        "description": description,
-        "home_page": homepage,
-        "project_urls": project_urls,
-        "first_seen": first_seen,
-        "last_seen": last_seen,
+    package_values = {
+        "name": name,
+        "description": packument.get("description"),
+        "homepage": packument.get("homepage"),
+        "repository_url": clean_repository_url(packument),
+        "bugs_url": extract_bugs_url(packument),
+        "license": packument.get("license"),
+        "keywords": packument.get("keywords") or [],
+        "author_name": extract_author_name(packument),
+        "latest_version": dist_tags.get("latest"),
+        "first_seen": now,
+        "last_seen": now,
     }
 
     package_stmt = (
-        insert(DBPackage)
-        .values(**package_data)
+        insert(DBNpmPackage)
+        .values(**package_values)
         .on_conflict_do_update(
-            constraint="unique_package",
+            index_elements=["name"],
             set_={
-                "description": description,
-                "home_page": homepage,
-                "project_urls": project_urls,
-                "first_seen": func.least(DBPackage.first_seen, first_seen),
-                "last_seen": func.greatest(DBPackage.last_seen, last_seen),
+                "description": package_values["description"],
+                "homepage": package_values["homepage"],
+                "repository_url": package_values["repository_url"],
+                "bugs_url": package_values["bugs_url"],
+                "license": package_values["license"],
+                "keywords": package_values["keywords"],
+                "author_name": package_values["author_name"],
+                "latest_version": package_values["latest_version"],
+                "last_seen": now,
             },
         )
     )

@@ -82,3 +82,35 @@ class DBSyncState(SQLModel, table=True):
     key: str = Field(primary_key=True)  # e.g. "npm_changes_last_seq"
     value: str  # The stored state value (e.g. a sequence number)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DBNpmPackage(SQLModel, table=True):
+    __tablename__ = "npm_packages"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    name: str = Field(unique=True, index=True)
+    description: str | None = Field(default=None)
+    homepage: str | None = Field(default=None)
+    repository_url: str | None = Field(default=None)
+    bugs_url: str | None = Field(default=None)
+    license: str | None = Field(default=None)
+    keywords: list[str] = Field(
+        default_factory=list, sa_column=Column(JSONB, nullable=False, server_default="[]")
+    )
+    author_name: str | None = Field(default=None)
+    latest_version: str | None = Field(default=None)
+    first_seen: datetime
+    last_seen: datetime
+
+
+class DBNpmRelease(SQLModel, table=True):
+    __tablename__ = "npm_releases"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    package_name: str = Field(index=True)
+    version: str
+    published_at: datetime
+    first_seen: datetime
+    last_seen: datetime
+
+    __table_args__ = (UniqueConstraint("package_name", "version", name="unique_npm_release"),)
