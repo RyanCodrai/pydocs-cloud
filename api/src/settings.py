@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # Application Configuration
     LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
     ENVIRONMENT: Literal["LOCAL", "PROD", "TEST", "EVAL"]
-    SERVICE_TYPE: Literal["user", "releases", "all"] = "all"
+    SERVICE_TYPE: Literal["user", "releases", "npm_sync", "all"] = "all"
 
     # Database Configuration
     POSTGRES_DB: str
@@ -29,6 +29,12 @@ class Settings(BaseSettings):
 
     # External API Keys
     GITHUB_TOKEN: Optional[str] = None
+
+    # npm Sync Configuration
+    NPM_SYNC_POLL_INTERVAL: int = 30  # seconds between polls
+    NPM_SYNC_CHANGES_BATCH_SIZE: int = 500
+    NPM_SYNC_MAX_PACKAGES_PER_RUN: int = 200
+    NPM_SYNC_PACKUMENT_CONCURRENCY: int = 10
 
     @property
     def DATABASE_URL(self) -> URL:

@@ -1,5 +1,0 @@
-functions-framework==3.*
-google-cloud-storage==2.*
-pandas==2.*
-pydantic-settings==2.*
-requests==2.*

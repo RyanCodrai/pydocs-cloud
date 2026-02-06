@@ -48,7 +48,6 @@ locals {
     "secretmanager.googleapis.com",
     "servicenetworking.googleapis.com",
     "artifactregistry.googleapis.com",
-    "cloudscheduler.googleapis.com",
   ]
 }
 
@@ -119,7 +118,6 @@ module "cloud_functions" {
     google_project_service.required_apis["cloudbuild.googleapis.com"],
     google_project_service.required_apis["eventarc.googleapis.com"],
     google_project_service.required_apis["run.googleapis.com"],
-    google_project_service.required_apis["cloudscheduler.googleapis.com"],
     module.storage,
     module.cloud_tasks,
     module.cloud_run

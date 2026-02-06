@@ -1,3 +1,4 @@
+import asyncio
 import signal
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
@@ -7,6 +8,7 @@ from sqlmodel import SQLModel
 from src.db.operations import async_engine
 from src.settings import settings
 from src.utils.logger import logger
+from src.utils.service_tag import ServiceType
 
 # Store the fastapi signal handler before ray replaces it
 fastapi_signal_handler = signal.getsignal(signal.SIGTERM)
@@ -64,9 +66,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await stack.enter_async_context(database())
     # You can add more resources to the stack here
 
+    # Start background services based on SERVICE_TYPE
+    npm_sync_task = None
+    if settings.SERVICE_TYPE == ServiceType.NPM_SYNC:
+        from src.utils.npm_sync import run_sync_loop
+
+        logger.info("Starting npm sync background task")
+        npm_sync_task = asyncio.create_task(run_sync_loop())
+
     async with stack:
         # At this point, all resources have been initialized
         # The application is ready to start serving requests
         yield
 
-    # At this point all resoruces are cleaned up
+    # Cancel background tasks on shutdown
+    if npm_sync_task is not None:
+        npm_sync_task.cancel()
+        try:
+            await npm_sync_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("npm sync background task stopped")
+
+    # At this point all resources are cleaned up
