@@ -232,24 +232,27 @@ async def process_packument(session: AsyncSession, packument: dict):
     # -- Upsert package --
     dist_tags = packument.get("dist-tags", {})
     description = packument.get("description")
-    homepage = packument.get("homepage")
+    home_page = packument.get("homepage")
     repository_url = clean_repository_url(packument)
     bugs_url = extract_bugs_url(packument)
 
-    # Extract GitHub candidates from description, homepage, repository, and bugs URLs
-    # People often mention their GitHub URL in the description but forget to set repository
+    # Build project_urls dict (mirrors PyPI's structure)
     project_urls = {}
     if repository_url:
         project_urls["Repository"] = repository_url
     if bugs_url:
         project_urls["Bug Tracker"] = bugs_url
+    if home_page:
+        project_urls["Homepage"] = home_page
 
-    github_candidates = extract_github_candidates(
+    # Extract GitHub candidates from description, homepage, repository, and bugs URLs
+    # People often mention their GitHub URL in the description but forget to set repository
+    source_code_candidates = extract_github_candidates(
         description=description,
         project_urls=project_urls,
-        home_page=homepage,
+        home_page=home_page,
     )
-    github_url = github_candidates[0] if github_candidates else None
+    source_code = source_code_candidates[0] if source_code_candidates else None
 
     # Derive package first_seen/last_seen from actual version publication dates
     version_times = [
@@ -261,17 +264,16 @@ async def process_packument(session: AsyncSession, packument: dict):
     last_seen = max(version_times) if version_times else now
 
     package_values = {
-        "name": name,
+        "package_name": name,
         "description": description,
-        "homepage": homepage,
-        "repository_url": repository_url,
-        "bugs_url": bugs_url,
+        "home_page": home_page,
+        "project_urls": project_urls,
+        "source_code": source_code,
         "license": packument.get("license"),
         "keywords": packument.get("keywords") or [],
         "author_name": extract_author_name(packument),
         "latest_version": dist_tags.get("latest"),
-        "github_url": github_url,
-        "github_candidates": github_candidates,
+        "source_code_candidates": source_code_candidates,
         "first_seen": first_seen,
         "last_seen": last_seen,
     }
@@ -280,18 +282,17 @@ async def process_packument(session: AsyncSession, packument: dict):
         insert(DBNpmPackage)
         .values(**package_values)
         .on_conflict_do_update(
-            index_elements=["name"],
+            index_elements=["package_name"],
             set_={
                 "description": package_values["description"],
-                "homepage": package_values["homepage"],
-                "repository_url": package_values["repository_url"],
-                "bugs_url": package_values["bugs_url"],
+                "home_page": package_values["home_page"],
+                "project_urls": package_values["project_urls"],
+                "source_code": package_values["source_code"],
                 "license": package_values["license"],
                 "keywords": package_values["keywords"],
                 "author_name": package_values["author_name"],
                 "latest_version": package_values["latest_version"],
-                "github_url": package_values["github_url"],
-                "github_candidates": package_values["github_candidates"],
+                "source_code_candidates": package_values["source_code_candidates"],
                 "first_seen": func.least(DBNpmPackage.first_seen, first_seen),
                 "last_seen": func.greatest(DBNpmPackage.last_seen, last_seen),
             },

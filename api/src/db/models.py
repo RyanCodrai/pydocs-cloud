@@ -88,23 +88,26 @@ class DBNpmPackage(SQLModel, table=True):
     __tablename__ = "npm_packages"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    name: str = Field(unique=True, index=True)
+    package_name: str = Field(index=True)
     description: str | None = Field(default=None)
-    homepage: str | None = Field(default=None)
-    repository_url: str | None = Field(default=None)
-    bugs_url: str | None = Field(default=None)
+    home_page: str | None = Field(default=None)
+    project_urls: dict[str, str] = Field(
+        default_factory=dict, sa_column=Column(JSONB, nullable=False, server_default="{}")
+    )
+    source_code: str | None = Field(default=None)
     license: str | None = Field(default=None)
     keywords: list[str] = Field(
         default_factory=list, sa_column=Column(JSONB, nullable=False, server_default="[]")
     )
     author_name: str | None = Field(default=None)
     latest_version: str | None = Field(default=None)
-    github_url: str | None = Field(default=None)
-    github_candidates: list[str] = Field(
+    source_code_candidates: list[str] = Field(
         default_factory=list, sa_column=Column(JSONB, nullable=False, server_default="[]")
     )
     first_seen: datetime
     last_seen: datetime
+
+    __table_args__ = (UniqueConstraint("package_name", name="unique_npm_package"),)
 
 
 class DBNpmRelease(SQLModel, table=True):
