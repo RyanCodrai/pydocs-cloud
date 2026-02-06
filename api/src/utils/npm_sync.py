@@ -34,6 +34,18 @@ NPM_REGISTRY_URL = "https://registry.npmjs.org"
 REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=30)
 STATE_KEY = "npm_changes_last_seq"
 
+# Headers required for the npm replication API (post-2025 migration)
+# and to avoid Cloudflare bot detection on registry endpoints.
+REPLICATE_HEADERS = {
+    "npm-replication-opt-in": "true",
+    "User-Agent": "pydocs-npm-sync/1.0 (registry mirror; +https://github.com/RyanCodrai/pydocs-cloud)",
+    "Accept": "application/json",
+}
+REGISTRY_HEADERS = {
+    "User-Agent": "pydocs-npm-sync/1.0 (registry mirror; +https://github.com/RyanCodrai/pydocs-cloud)",
+    "Accept": "application/json",
+}
+
 
 async def load_last_seq(session: AsyncSession) -> str:
     """Load the last processed sequence number from the database."""
@@ -67,7 +79,7 @@ async def fetch_changes(http_session: aiohttp.ClientSession, since: str, limit: 
     url = f"{NPM_REPLICATE_URL}/_changes"
     params = {"since": since, "limit": limit}
 
-    async with http_session.get(url, params=params, timeout=REQUEST_TIMEOUT) as resp:
+    async with http_session.get(url, params=params, headers=REPLICATE_HEADERS, timeout=REQUEST_TIMEOUT) as resp:
         resp.raise_for_status()
         return await resp.json()
 
@@ -83,7 +95,7 @@ async def fetch_packument(http_session: aiohttp.ClientSession, package_name: str
     url = f"{NPM_REGISTRY_URL}/{encoded_name}"
 
     try:
-        async with http_session.get(url, timeout=REQUEST_TIMEOUT) as resp:
+        async with http_session.get(url, headers=REGISTRY_HEADERS, timeout=REQUEST_TIMEOUT) as resp:
             if resp.status == 404:
                 return None
             resp.raise_for_status()
