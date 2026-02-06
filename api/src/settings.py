@@ -31,10 +31,9 @@ class Settings(BaseSettings):
     GITHUB_TOKEN: Optional[str] = None
 
     # npm Sync Configuration
-    NPM_SYNC_POLL_INTERVAL: int = 30  # seconds between polls
-    NPM_SYNC_CHANGES_BATCH_SIZE: int = 500
-    NPM_SYNC_MAX_PACKAGES_PER_RUN: int = 200
-    NPM_SYNC_PACKUMENT_CONCURRENCY: int = 10
+    NPM_SYNC_POLL_INTERVAL: int = 30  # seconds between polls when caught up
+    NPM_SYNC_CHANGES_BATCH_SIZE: int = 500  # changes per _changes API call
+    NPM_SYNC_PACKUMENT_CONCURRENCY: int = 10  # parallel packument fetches
 
     @property
     def DATABASE_URL(self) -> URL:

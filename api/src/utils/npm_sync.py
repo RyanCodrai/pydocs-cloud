@@ -270,10 +270,6 @@ async def sync_once(http_session: aiohttp.ClientSession) -> dict:
         {r["id"] for r in results if not r["id"].startswith("_design/")}
     )
 
-    # Cap per run
-    if len(package_names) > settings.NPM_SYNC_MAX_PACKAGES_PER_RUN:
-        package_names = package_names[: settings.NPM_SYNC_MAX_PACKAGES_PER_RUN]
-
     logger.info(f"npm sync: {len(results)} changes, {len(package_names)} unique packages")
 
     # Fetch packuments concurrently with a semaphore to limit concurrency

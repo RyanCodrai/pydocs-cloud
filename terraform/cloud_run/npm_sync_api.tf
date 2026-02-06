@@ -164,11 +164,6 @@ resource "google_cloud_run_v2_service" "npm_sync_api" {
         value = "500"
       }
 
-      env {
-        name  = "NPM_SYNC_MAX_PACKAGES_PER_RUN"
-        value = "200"
-      }
-
       resources {
         limits = {
           cpu    = "1"
