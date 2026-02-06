@@ -99,6 +99,10 @@ class DBNpmPackage(SQLModel, table=True):
     )
     author_name: str | None = Field(default=None)
     latest_version: str | None = Field(default=None)
+    github_url: str | None = Field(default=None)
+    github_candidates: list[str] = Field(
+        default_factory=list, sa_column=Column(JSONB, nullable=False, server_default="[]")
+    )
     first_seen: datetime
     last_seen: datetime
 

@@ -18,12 +18,12 @@ import logging
 from datetime import datetime, timezone
 
 import aiohttp
-from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBNpmPackage, DBNpmRelease, DBSyncState
 from src.db.operations import managed_session
 from src.settings import settings
+from src.utils.github_extraction import extract_github_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -229,17 +229,38 @@ async def process_packument(session: AsyncSession, packument: dict):
 
     # -- Upsert package --
     dist_tags = packument.get("dist-tags", {})
+    description = packument.get("description")
+    homepage = packument.get("homepage")
+    repository_url = clean_repository_url(packument)
+    bugs_url = extract_bugs_url(packument)
+
+    # Extract GitHub candidates from description, homepage, repository, and bugs URLs
+    # People often mention their GitHub URL in the description but forget to set repository
+    project_urls = {}
+    if repository_url:
+        project_urls["Repository"] = repository_url
+    if bugs_url:
+        project_urls["Bug Tracker"] = bugs_url
+
+    github_candidates = extract_github_candidates(
+        description=description,
+        project_urls=project_urls,
+        home_page=homepage,
+    )
+    github_url = github_candidates[0] if github_candidates else None
 
     package_values = {
         "name": name,
-        "description": packument.get("description"),
-        "homepage": packument.get("homepage"),
-        "repository_url": clean_repository_url(packument),
-        "bugs_url": extract_bugs_url(packument),
+        "description": description,
+        "homepage": homepage,
+        "repository_url": repository_url,
+        "bugs_url": bugs_url,
         "license": packument.get("license"),
         "keywords": packument.get("keywords") or [],
         "author_name": extract_author_name(packument),
         "latest_version": dist_tags.get("latest"),
+        "github_url": github_url,
+        "github_candidates": github_candidates,
         "first_seen": now,
         "last_seen": now,
     }
@@ -258,6 +279,8 @@ async def process_packument(session: AsyncSession, packument: dict):
                 "keywords": package_values["keywords"],
                 "author_name": package_values["author_name"],
                 "latest_version": package_values["latest_version"],
+                "github_url": package_values["github_url"],
+                "github_candidates": package_values["github_candidates"],
                 "last_seen": now,
             },
         )
