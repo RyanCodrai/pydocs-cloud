@@ -1,0 +1,48 @@
+# One-time setup: Configure branch protection rules for main
+#
+# Run this workflow manually from the Actions tab after merging the PR that
+# adds this file. It uses a repository ruleset to enforce:
+#   - No direct pushes to main (all changes via PR)
+#   - At least 1 approval required
+#   - Dismiss stale reviews on new pushes
+#
+# Note: Requires a PAT with admin permissions stored as BRANCH_PROTECTION_TOKEN,
+# OR use the default GITHUB_TOKEN if your org allows it (needs "Administration"
+# repo permission). Fine-grained PATs need "Administration" read/write.
+
+name: Setup Branch Protection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  protect:
+    name: Configure main branch protection
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Set branch protection rules
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/branches/main/protection \
+            -f "required_status_checks=null" \
+            -F "enforce_admins=true" \
+            -F "required_pull_request_reviews[required_approving_review_count]=1" \
+            -F "required_pull_request_reviews[dismiss_stale_reviews]=true" \
+            -f "restrictions=null" \
+            -F "allow_force_pushes=false" \
+            -F "allow_deletions=false"
+
+          echo "Branch protection configured for main:"
+          echo "  - Direct pushes blocked (all changes require a PR)"
+          echo "  - 1 approval required"
+          echo "  - Stale reviews dismissed on new pushes"
+          echo "  - Force pushes and branch deletion disabled"
+          echo "  - Rules enforced for admins too"

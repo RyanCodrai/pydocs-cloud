@@ -1,0 +1,67 @@
+# Continuous Deployment - Deploy to Cloud Run on merge to main
+#
+# Triggers when a PR is merged (push to main). Builds the Docker image via
+# Cloud Build, then deploys the new image to Cloud Run.
+#
+# Required GitHub Secrets:
+#   GCP_WORKLOAD_IDENTITY_PROVIDER - Workload Identity Provider resource name
+#     Format: projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/<POOL>/providers/<PROVIDER>
+#   GCP_SERVICE_ACCOUNT - GCP service account email for deployments
+#     e.g. github-deployer@pydocs-prod.iam.gserviceaccount.com
+#
+# GCP Setup (one-time):
+#   1. Create a service account for GitHub Actions deployments
+#   2. Grant it roles: Cloud Build Editor, Cloud Run Admin, Service Account User, Artifact Registry Writer
+#   3. Set up Workload Identity Federation:
+#      - Create a Workload Identity Pool
+#      - Create a Provider linked to your GitHub repo
+#      - Bind the service account to the pool
+#   See: https://github.com/google-github-actions/auth#workload-identity-federation
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+# Prevent concurrent deployments - queue rather than cancel
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write # Required for Workload Identity Federation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push image via Cloud Build
+        working-directory: api
+        run: |
+          gcloud builds submit \
+            --config=cloudbuild.yaml \
+            --project=pydocs-prod
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run services update pydocs-releases-api \
+            --image=europe-west2-docker.pkg.dev/pydocs-prod/pydocs-images/pydocs-api:latest \
+            --region=europe-west2 \
+            --project=pydocs-prod
