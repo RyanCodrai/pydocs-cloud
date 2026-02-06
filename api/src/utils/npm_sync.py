@@ -33,6 +33,8 @@ NPM_REGISTRY_URL = "https://registry.npmjs.org"
 
 REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=30)
 STATE_KEY = "npm_changes_last_seq"
+# Maximum allowed by the _changes API
+CHANGES_PAGE_SIZE = 10_000
 
 # Headers required for the npm replication API (post-2025 migration)
 # and to avoid Cloudflare bot detection on registry endpoints.
@@ -69,7 +71,7 @@ async def save_last_seq(session: AsyncSession, last_seq: str):
     await session.commit()
 
 
-async def fetch_changes(http_session: aiohttp.ClientSession, since: str, limit: int) -> dict:
+async def fetch_changes(http_session: aiohttp.ClientSession, since: str) -> dict:
     """
     Fetch a batch of changes from the npm registry _changes feed.
 
@@ -77,7 +79,7 @@ async def fetch_changes(http_session: aiohttp.ClientSession, since: str, limit: 
     for the next request — this is the chain traversal.
     """
     url = f"{NPM_REPLICATE_URL}/_changes"
-    params = {"since": since, "limit": limit}
+    params = {"since": since, "limit": CHANGES_PAGE_SIZE}
 
     async with http_session.get(url, params=params, headers=REPLICATE_HEADERS, timeout=REQUEST_TIMEOUT) as resp:
         resp.raise_for_status()
@@ -89,20 +91,29 @@ async def fetch_packument(http_session: aiohttp.ClientSession, package_name: str
     Fetch the packument (package document) for a single npm package.
 
     The packument contains all versions, their timestamps, description,
-    repository info, and more.
+    repository info, and more. Retries on 429 with exponential backoff.
     """
     encoded_name = package_name.replace("/", "%2f")
     url = f"{NPM_REGISTRY_URL}/{encoded_name}"
 
-    try:
-        async with http_session.get(url, headers=REGISTRY_HEADERS, timeout=REQUEST_TIMEOUT) as resp:
-            if resp.status == 404:
-                return None
-            resp.raise_for_status()
-            return await resp.json()
-    except Exception as e:
-        logger.warning(f"Failed to fetch packument for {package_name}: {e}")
-        return None
+    for attempt in range(4):
+        try:
+            async with http_session.get(url, headers=REGISTRY_HEADERS, timeout=REQUEST_TIMEOUT) as resp:
+                if resp.status == 404:
+                    return None
+                if resp.status == 429:
+                    wait = 2 ** attempt
+                    logger.warning(f"Rate limited fetching {package_name}, retrying in {wait}s")
+                    await asyncio.sleep(wait)
+                    continue
+                resp.raise_for_status()
+                return await resp.json()
+        except Exception as e:
+            logger.warning(f"Failed to fetch packument for {package_name}: {e}")
+            return None
+
+    logger.warning(f"Gave up fetching {package_name} after rate limiting")
+    return None
 
 
 def extract_project_urls(packument: dict) -> dict[str, str]:
@@ -253,11 +264,7 @@ async def sync_once(http_session: aiohttp.ClientSession) -> dict:
     logger.info(f"npm sync: fetching changes since seq {last_seq}")
 
     # Fetch changes from the _changes feed
-    changes_data = await fetch_changes(
-        http_session,
-        since=last_seq,
-        limit=settings.NPM_SYNC_CHANGES_BATCH_SIZE,
-    )
+    changes_data = await fetch_changes(http_session, since=last_seq)
     results = changes_data.get("results", [])
     new_last_seq = changes_data.get("last_seq", last_seq)
 

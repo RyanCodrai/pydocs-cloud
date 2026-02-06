@@ -153,17 +153,6 @@ resource "google_cloud_run_v2_service" "npm_sync_api" {
         }
       }
 
-      # npm sync tuning (override defaults via env vars)
-      env {
-        name  = "NPM_SYNC_POLL_INTERVAL"
-        value = "30"
-      }
-
-      env {
-        name  = "NPM_SYNC_CHANGES_BATCH_SIZE"
-        value = "500"
-      }
-
       resources {
         limits = {
           cpu    = "1"

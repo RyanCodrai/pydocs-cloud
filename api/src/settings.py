@@ -31,8 +31,7 @@ class Settings(BaseSettings):
     GITHUB_TOKEN: Optional[str] = None
 
     # npm Sync Configuration
-    NPM_SYNC_POLL_INTERVAL: int = 30  # seconds between polls when caught up
-    NPM_SYNC_CHANGES_BATCH_SIZE: int = 500  # changes per _changes API call
+    NPM_SYNC_POLL_INTERVAL: int = 5  # seconds between polls when caught up
     NPM_SYNC_PACKUMENT_CONCURRENCY: int = 10  # parallel packument fetches
 
     @property
