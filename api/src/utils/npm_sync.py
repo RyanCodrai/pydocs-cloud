@@ -331,17 +331,23 @@ async def run_sync_loop():
     """
     Main polling loop. Runs forever, fetching changes from the npm registry
     and upserting into the database.
+
+    Processes batches back-to-back while catching up. Only sleeps when
+    there are no new changes (i.e. we've reached the head of the feed).
     """
     logger.info("npm sync: starting continuous polling loop")
 
     async with aiohttp.ClientSession() as http_session:
         while True:
             try:
-                await sync_once(http_session)
+                result = await sync_once(http_session)
+                if result["changes"] == 0:
+                    # We're at the head of the feed, wait before polling again
+                    await asyncio.sleep(settings.NPM_SYNC_POLL_INTERVAL)
             except asyncio.CancelledError:
                 logger.info("npm sync: loop cancelled, shutting down")
                 raise
             except Exception as e:
                 logger.error(f"npm sync: error in sync cycle: {e}", exc_info=True)
-
-            await asyncio.sleep(settings.NPM_SYNC_POLL_INTERVAL)
+                # Back off on errors to avoid hammering a failing endpoint
+                await asyncio.sleep(settings.NPM_SYNC_POLL_INTERVAL)
