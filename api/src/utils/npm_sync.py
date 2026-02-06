@@ -38,15 +38,22 @@ CHANGES_PAGE_SIZE = 10_000
 
 # Headers required for the npm replication API (post-2025 migration)
 # and to avoid Cloudflare bot detection on registry endpoints.
-REPLICATE_HEADERS = {
-    "npm-replication-opt-in": "true",
+_BASE_HEADERS = {
     "User-Agent": "pydocs-npm-sync/1.0 (registry mirror; +https://github.com/RyanCodrai/pydocs-cloud)",
     "Accept": "application/json",
 }
-REGISTRY_HEADERS = {
-    "User-Agent": "pydocs-npm-sync/1.0 (registry mirror; +https://github.com/RyanCodrai/pydocs-cloud)",
-    "Accept": "application/json",
-}
+
+
+def _build_headers() -> tuple[dict, dict]:
+    """Build request headers, adding Bearer auth if NPM_TOKEN is configured."""
+    replicate = {**_BASE_HEADERS, "npm-replication-opt-in": "true"}
+    registry = {**_BASE_HEADERS}
+    if settings.NPM_TOKEN:
+        registry["Authorization"] = f"Bearer {settings.NPM_TOKEN}"
+    return replicate, registry
+
+
+REPLICATE_HEADERS, REGISTRY_HEADERS = _build_headers()
 
 
 async def load_last_seq(session: AsyncSession) -> str:

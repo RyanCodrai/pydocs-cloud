@@ -19,6 +19,7 @@ resource "google_secret_manager_secret_iam_member" "npm_sync_api_secrets" {
     "postgres-password",
     "postgres-host",
     "postgres-port",
+    "npm-token",
   ])
 
   secret_id = each.value
@@ -148,6 +149,17 @@ resource "google_cloud_run_v2_service" "npm_sync_api" {
         value_source {
           secret_key_ref {
             secret  = "postgres-port"
+            version = "latest"
+          }
+        }
+      }
+
+      # npm registry auth (read-only token for higher rate limits)
+      env {
+        name = "NPM_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret  = "npm-token"
             version = "latest"
           }
         }
