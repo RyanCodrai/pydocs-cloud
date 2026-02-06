@@ -18,6 +18,7 @@ import logging
 from datetime import datetime, timezone
 
 import aiohttp
+from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBNpmPackage, DBNpmRelease, DBSyncState
@@ -213,14 +214,15 @@ async def process_packument(session: AsyncSession, packument: dict):
                 package_name=name,
                 version=version_str,
                 published_at=published_at,
-                first_seen=now,
-                last_seen=now,
+                first_seen=published_at,
+                last_seen=published_at,
             )
             .on_conflict_do_update(
                 constraint="unique_npm_release",
                 set_={
                     "published_at": published_at,
-                    "last_seen": now,
+                    "first_seen": func.least(DBNpmRelease.first_seen, published_at),
+                    "last_seen": func.greatest(DBNpmRelease.last_seen, published_at),
                 },
             )
         )
@@ -249,6 +251,15 @@ async def process_packument(session: AsyncSession, packument: dict):
     )
     github_url = github_candidates[0] if github_candidates else None
 
+    # Derive package first_seen/last_seen from actual version publication dates
+    version_times = [
+        parse_npm_timestamp(t)
+        for v, t in time_map.items()
+        if v in versions
+    ]
+    first_seen = min(version_times) if version_times else now
+    last_seen = max(version_times) if version_times else now
+
     package_values = {
         "name": name,
         "description": description,
@@ -261,8 +272,8 @@ async def process_packument(session: AsyncSession, packument: dict):
         "latest_version": dist_tags.get("latest"),
         "github_url": github_url,
         "github_candidates": github_candidates,
-        "first_seen": now,
-        "last_seen": now,
+        "first_seen": first_seen,
+        "last_seen": last_seen,
     }
 
     package_stmt = (
@@ -281,7 +292,8 @@ async def process_packument(session: AsyncSession, packument: dict):
                 "latest_version": package_values["latest_version"],
                 "github_url": package_values["github_url"],
                 "github_candidates": package_values["github_candidates"],
-                "last_seen": now,
+                "first_seen": func.least(DBNpmPackage.first_seen, first_seen),
+                "last_seen": func.greatest(DBNpmPackage.last_seen, last_seen),
             },
         )
     )
