@@ -24,7 +24,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBPackage, DBRelease, DBSyncState
 from src.db.operations import managed_session
 from src.settings import settings
-from src.utils.github_extraction import extract_github_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -233,14 +232,6 @@ async def process_packument(session: AsyncSession, packument: dict):
     if home_page:
         project_urls["Homepage"] = home_page
 
-    # Extract GitHub candidates from description, homepage, repository, and bugs URLs
-    source_code_candidates = extract_github_candidates(
-        description=description,
-        project_urls=project_urls,
-        home_page=home_page,
-    )
-    source_code = source_code_candidates[0] if source_code_candidates else None
-
     # Derive package first_seen/last_seen from actual version publication dates
     version_times = [
         parse_npm_timestamp(t)
@@ -258,8 +249,6 @@ async def process_packument(session: AsyncSession, packument: dict):
             description=description,
             home_page=home_page,
             project_urls=project_urls,
-            source_code=source_code,
-            source_code_candidates=source_code_candidates,
             first_seen=first_seen,
             last_seen=last_seen,
         )
@@ -269,8 +258,6 @@ async def process_packument(session: AsyncSession, packument: dict):
                 "description": description,
                 "home_page": home_page,
                 "project_urls": project_urls,
-                "source_code": source_code,
-                "source_code_candidates": source_code_candidates,
                 "first_seen": func.least(DBPackage.first_seen, first_seen),
                 "last_seen": func.greatest(DBPackage.last_seen, last_seen),
             },

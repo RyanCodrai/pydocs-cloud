@@ -18,8 +18,6 @@ class PackageLookupResponse(BaseModel):
     description: str | None = None
     home_page: str | None = None
     project_urls: dict[str, str] = {}
-    source_code: str | None = None
-    source_code_candidates: list[str] = []
     first_seen: datetime
     last_seen: datetime
 
@@ -50,8 +48,6 @@ async def lookup_package(
         description=package.description,
         home_page=package.home_page,
         project_urls=package.project_urls,
-        source_code=package.source_code,
-        source_code_candidates=package.source_code_candidates,
         first_seen=package.first_seen,
         last_seen=package.last_seen,
     )

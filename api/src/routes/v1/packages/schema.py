@@ -13,7 +13,5 @@ class PackageInput(BaseModel):
     description: str | None = None
     home_page: str | None = None
     project_urls: dict[str, str] = {}
-    source_code: str | None = None
     first_seen: Annotated[datetime, BeforeValidator(parse_timestamp)]
     last_seen: Annotated[datetime, BeforeValidator(parse_timestamp)]
-    source_code_candidates: list[str] | None = None

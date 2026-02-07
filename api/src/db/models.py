@@ -65,13 +65,8 @@ class DBPackage(SQLModel, table=True):
     project_urls: dict[str, str] = Field(
         default_factory=dict, sa_column=Column(JSONB, nullable=False, server_default="{}")
     )
-    source_code: str | None = Field(default=None)
     first_seen: datetime
     last_seen: datetime
-    # GitHub URL extraction pipeline fields
-    source_code_candidates: list[str] = Field(
-        default_factory=list, sa_column=Column(JSONB, nullable=False, server_default="[]")
-    )
 
     __table_args__ = (UniqueConstraint("ecosystem", "package_name", name="unique_package"),)
 
