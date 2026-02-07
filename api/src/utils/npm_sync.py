@@ -21,7 +21,7 @@ import aiohttp
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.db.models import DBNpmPackage, DBNpmRelease, DBSyncState
+from src.db.models import DBPackage, DBRelease, DBSyncState
 from src.db.operations import managed_session
 from src.settings import settings
 from src.utils.github_extraction import extract_github_candidates
@@ -170,16 +170,6 @@ def extract_bugs_url(packument: dict) -> str | None:
     return None
 
 
-def extract_author_name(packument: dict) -> str | None:
-    """Extract the author name from a packument."""
-    author = packument.get("author")
-    if isinstance(author, dict):
-        return author.get("name")
-    if isinstance(author, str):
-        return author
-    return None
-
-
 def parse_npm_timestamp(ts: str) -> datetime:
     """Parse an npm ISO timestamp like '2018-04-17T04:25:41.199Z' to naive datetime."""
     return datetime.fromisoformat(ts.replace("Z", "+00:00")).replace(tzinfo=None)
@@ -188,7 +178,7 @@ def parse_npm_timestamp(ts: str) -> datetime:
 async def process_packument(session: AsyncSession, packument: dict):
     """
     Process a single packument: upsert all its releases and the package record
-    into the npm-specific tables.
+    into the shared releases and packages tables with ecosystem='npm'.
     """
     name = packument.get("name")
     if not name:
@@ -209,20 +199,19 @@ async def process_packument(session: AsyncSession, packument: dict):
         published_at = parse_npm_timestamp(timestamp_str)
 
         stmt = (
-            insert(DBNpmRelease)
+            insert(DBRelease)
             .values(
+                ecosystem="npm",
                 package_name=name,
                 version=version_str,
-                published_at=published_at,
                 first_seen=published_at,
                 last_seen=published_at,
             )
             .on_conflict_do_update(
-                constraint="unique_npm_release",
+                constraint="unique_release",
                 set_={
-                    "published_at": published_at,
-                    "first_seen": func.least(DBNpmRelease.first_seen, published_at),
-                    "last_seen": func.greatest(DBNpmRelease.last_seen, published_at),
+                    "first_seen": func.least(DBRelease.first_seen, published_at),
+                    "last_seen": func.greatest(DBRelease.last_seen, published_at),
                 },
             )
         )
@@ -230,13 +219,12 @@ async def process_packument(session: AsyncSession, packument: dict):
         release_count += 1
 
     # -- Upsert package --
-    dist_tags = packument.get("dist-tags", {})
     description = packument.get("description")
     home_page = packument.get("homepage")
     repository_url = clean_repository_url(packument)
     bugs_url = extract_bugs_url(packument)
 
-    # Build project_urls dict (mirrors PyPI's structure)
+    # Build project_urls dict
     project_urls = {}
     if repository_url:
         project_urls["Repository"] = repository_url
@@ -246,7 +234,6 @@ async def process_packument(session: AsyncSession, packument: dict):
         project_urls["Homepage"] = home_page
 
     # Extract GitHub candidates from description, homepage, repository, and bugs URLs
-    # People often mention their GitHub URL in the description but forget to set repository
     source_code_candidates = extract_github_candidates(
         description=description,
         project_urls=project_urls,
@@ -263,38 +250,29 @@ async def process_packument(session: AsyncSession, packument: dict):
     first_seen = min(version_times) if version_times else now
     last_seen = max(version_times) if version_times else now
 
-    package_values = {
-        "package_name": name,
-        "description": description,
-        "home_page": home_page,
-        "project_urls": project_urls,
-        "source_code": source_code,
-        "license": packument.get("license"),
-        "keywords": packument.get("keywords") or [],
-        "author_name": extract_author_name(packument),
-        "latest_version": dist_tags.get("latest"),
-        "source_code_candidates": source_code_candidates,
-        "first_seen": first_seen,
-        "last_seen": last_seen,
-    }
-
     package_stmt = (
-        insert(DBNpmPackage)
-        .values(**package_values)
+        insert(DBPackage)
+        .values(
+            ecosystem="npm",
+            package_name=name,
+            description=description,
+            home_page=home_page,
+            project_urls=project_urls,
+            source_code=source_code,
+            source_code_candidates=source_code_candidates,
+            first_seen=first_seen,
+            last_seen=last_seen,
+        )
         .on_conflict_do_update(
-            index_elements=["package_name"],
+            constraint="unique_package",
             set_={
-                "description": package_values["description"],
-                "home_page": package_values["home_page"],
-                "project_urls": package_values["project_urls"],
-                "source_code": package_values["source_code"],
-                "license": package_values["license"],
-                "keywords": package_values["keywords"],
-                "author_name": package_values["author_name"],
-                "latest_version": package_values["latest_version"],
-                "source_code_candidates": package_values["source_code_candidates"],
-                "first_seen": func.least(DBNpmPackage.first_seen, first_seen),
-                "last_seen": func.greatest(DBNpmPackage.last_seen, last_seen),
+                "description": description,
+                "home_page": home_page,
+                "project_urls": project_urls,
+                "source_code": source_code,
+                "source_code_candidates": source_code_candidates,
+                "first_seen": func.least(DBPackage.first_seen, first_seen),
+                "last_seen": func.greatest(DBPackage.last_seen, last_seen),
             },
         )
     )

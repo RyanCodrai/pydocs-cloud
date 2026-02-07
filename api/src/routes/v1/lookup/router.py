@@ -4,11 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.db.models import DBNpmPackage, DBPackage
+from src.db.models import DBPackage
 from src.db.operations import get_db_session
 from src.utils.service_tag import ServiceType, service_tag
 
 router = APIRouter()
+
+SUPPORTED_ECOSYSTEMS = {"pypi", "npm"}
 
 
 class PackageLookupResponse(BaseModel):
@@ -22,12 +24,6 @@ class PackageLookupResponse(BaseModel):
     last_seen: datetime
 
 
-ECOSYSTEM_MODELS = {
-    "pypi": DBPackage,
-    "npm": DBNpmPackage,
-}
-
-
 @service_tag(ServiceType.RELEASES)
 @router.get("/lookup/{ecosystem}/{package_name:path}", response_model=PackageLookupResponse)
 async def lookup_package(
@@ -36,14 +32,13 @@ async def lookup_package(
     db_session: AsyncSession = Depends(get_db_session),
 ) -> PackageLookupResponse:
     """Look up package metadata by ecosystem and name."""
-    model = ECOSYSTEM_MODELS.get(ecosystem)
-    if model is None:
+    if ecosystem not in SUPPORTED_ECOSYSTEMS:
         raise HTTPException(status_code=400, detail=f"Unsupported ecosystem: {ecosystem}")
 
-    stmt = select(model).where(model.package_name == package_name)
-    # PyPI packages also filter by ecosystem column
-    if ecosystem == "pypi":
-        stmt = stmt.where(model.ecosystem == ecosystem)
+    stmt = select(DBPackage).where(
+        DBPackage.ecosystem == ecosystem,
+        DBPackage.package_name == package_name,
+    )
 
     result = await db_session.exec(stmt)
     package = result.scalar_one_or_none()
