@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -13,17 +13,14 @@ router = APIRouter()
 SUPPORTED_ECOSYSTEMS = {"pypi", "npm"}
 
 
-class PackageNotFoundError(Exception):
+class PackageNotFoundError(HTTPException):
     def __init__(self, package_name: str, ecosystem: str):
-        self.package_name = package_name
-        self.ecosystem = ecosystem
-        self.detail = f"Package '{package_name}' not found in {ecosystem}"
+        super().__init__(status_code=404, detail=f"Package '{package_name}' not found in {ecosystem}")
 
 
-class SourceCodeNotFoundError(Exception):
+class SourceCodeNotFoundError(HTTPException):
     def __init__(self, package_name: str):
-        self.package_name = package_name
-        self.detail = f"No source code repository found for '{package_name}'"
+        super().__init__(status_code=404, detail=f"No source code repository found for '{package_name}'")
 
 
 class PackageLookupResponse(BaseModel):

@@ -1,13 +1,11 @@
 from itertools import chain
 
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute, APIWebSocketRoute
 from src.routes.health import router as health_router
 from src.routes.v1 import router as v1_router
-from src.routes.v1.lookup.router import PackageNotFoundError, SourceCodeNotFoundError
 from src.settings import settings
 from src.utils.app_lifespan import lifespan
 from src.utils.logger import logger
@@ -72,14 +70,6 @@ def get_application() -> FastAPI:
         allow_headers=["*"],
         allow_credentials=True,
     )
-
-    @app.exception_handler(PackageNotFoundError)
-    async def package_not_found_handler(request: Request, exc: PackageNotFoundError):
-        return JSONResponse(status_code=404, content={"detail": exc.detail})
-
-    @app.exception_handler(SourceCodeNotFoundError)
-    async def source_code_not_found_handler(request: Request, exc: SourceCodeNotFoundError):
-        return JSONResponse(status_code=404, content={"detail": exc.detail})
 
     return app
 
