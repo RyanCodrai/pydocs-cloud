@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -11,6 +11,19 @@ from src.utils.service_tag import ServiceType, service_tag
 router = APIRouter()
 
 SUPPORTED_ECOSYSTEMS = {"pypi", "npm"}
+
+
+class PackageNotFoundError(Exception):
+    def __init__(self, package_name: str, ecosystem: str):
+        self.package_name = package_name
+        self.ecosystem = ecosystem
+        self.detail = f"Package '{package_name}' not found in {ecosystem}"
+
+
+class SourceCodeNotFoundError(Exception):
+    def __init__(self, package_name: str):
+        self.package_name = package_name
+        self.detail = f"No source code repository found for '{package_name}'"
 
 
 class PackageLookupResponse(BaseModel):
@@ -31,7 +44,7 @@ async def lookup_package(
 ) -> PackageLookupResponse:
     """Look up package metadata by ecosystem and name."""
     if ecosystem not in SUPPORTED_ECOSYSTEMS:
-        raise HTTPException(status_code=400, detail=f"Unsupported ecosystem: {ecosystem}")
+        raise PackageNotFoundError(package_name, ecosystem)
 
     stmt = select(DBPackage).where(
         DBPackage.ecosystem == ecosystem,
@@ -41,10 +54,10 @@ async def lookup_package(
     result = await db_session.exec(stmt)
     package = result.scalar_one_or_none()
     if package is None:
-        raise HTTPException(status_code=404, detail=f"Package '{package_name}' not found in {ecosystem}")
+        raise PackageNotFoundError(package_name, ecosystem)
 
     if not package.project_urls:
-        raise HTTPException(status_code=404, detail=f"No source code repository found for '{package_name}'")
+        raise SourceCodeNotFoundError(package_name)
 
     return PackageLookupResponse(
         package_name=package.package_name,
