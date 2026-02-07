@@ -41,7 +41,10 @@ async def lookup_package(
     result = await db_session.exec(stmt)
     package = result.scalar_one_or_none()
     if package is None:
-        raise HTTPException(status_code=404, detail="Package not found")
+        raise HTTPException(status_code=404, detail=f"Package '{package_name}' not found in {ecosystem}")
+
+    if not package.project_urls:
+        raise HTTPException(status_code=404, detail=f"No source code repository found for '{package_name}'")
 
     return PackageLookupResponse(
         package_name=package.package_name,
