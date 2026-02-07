@@ -1,4 +1,7 @@
 import re
+from typing import Annotated
+
+from pydantic import BeforeValidator
 
 
 def normalize_package_name(name: str) -> str:
@@ -8,3 +11,6 @@ def normalize_package_name(name: str) -> str:
     e.g. "My_Package.Name" -> "my-package-name"
     """
     return re.sub(r"[-_.]+", "-", name).lower()
+
+
+NormalizedPypiPackageName = Annotated[str, BeforeValidator(normalize_package_name)]

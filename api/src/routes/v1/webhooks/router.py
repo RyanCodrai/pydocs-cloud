@@ -11,7 +11,6 @@ from src.routes.v1.packages.schema import PackageInput
 from src.routes.v1.packages.service import PackageService, get_package_service
 from src.routes.v1.releases.schema import ReleaseInput
 from src.routes.v1.releases.service import ReleaseService, get_release_service
-from src.utils.pypi import normalize_package_name
 from src.utils.service_tag import ServiceType, service_tag
 
 router = APIRouter()
@@ -55,15 +54,11 @@ async def process_releases_webhook(
     releases_data = df.replace({np.nan: None}).to_dict(orient="records")
 
     for release_data in releases_data:
-        package_name = release_data["name"]
-        if release_data["ecosystem"] == "pypi":
-            package_name = normalize_package_name(package_name)
-
         # Upsert release
         await release_service.upsert(
             data=ReleaseInput(
                 ecosystem=release_data["ecosystem"],
-                package_name=package_name,
+                package_name=release_data["name"],
                 version=release_data["version"],
                 first_seen=release_data["timestamp"],
                 last_seen=release_data["timestamp"],
@@ -87,7 +82,7 @@ async def process_releases_webhook(
         await package_service.upsert(
             data=PackageInput(
                 ecosystem=release_data["ecosystem"],
-                package_name=package_name,
+                package_name=release_data["name"],
                 description=release_data.get("description"),
                 home_page=release_data.get("home_page"),
                 project_urls=project_urls_dict,
