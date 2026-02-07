@@ -5,7 +5,6 @@ from src.routes.v1.packages.service import PackageService, get_package_service
 from src.utils.embeddings import embed_text
 from src.utils.github_extraction import extract_github_candidates
 from src.utils.github_readme import get_readmes_for_repos
-from src.utils.service_tag import ServiceType, service_tag
 
 router = APIRouter()
 
@@ -44,7 +43,6 @@ async def find_github_repos(
     return scored_repos
 
 
-@service_tag(ServiceType.RELEASES)
 @router.get("/lookup/{package_name}", response_model=LookupResponse)
 async def lookup_github_urls(
     package_name: str,

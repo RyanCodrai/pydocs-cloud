@@ -19,26 +19,13 @@ dependencies = [
 
     # Cloud Services
     "google-cloud-logging",
-    "google-cloud-storage",
-    "google-cloud-tasks",
-    "gcloud-aio-storage",
     "google-auth",
-
-    # Security & Authentication
-    "pyjwt",
-    "cryptography",
 
     # HTTP Client
     "aiohttp",
 
-    # Machine Learning & Data Processing
-    "numpy",
-    "scikit-learn",
-    "pandas",
-
     # Utilities
     "tenacity",
-    "pytest-asyncio",
 ]
 
 [build-system]
@@ -49,6 +36,18 @@ build-backend = "hatchling.build"
 packages = ["src"]
 
 [dependency-groups]
+user = [
+    "pyjwt",
+    "cryptography",
+]
+releases = [
+    "numpy",
+    "scikit-learn",
+    "pandas",
+    "google-cloud-storage",
+    "gcloud-aio-storage",
+    "google-cloud-tasks",
+]
 dev = [
     "pytest",
     "pytest-asyncio",

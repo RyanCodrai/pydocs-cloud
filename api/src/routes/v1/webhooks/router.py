@@ -11,7 +11,6 @@ from src.routes.v1.packages.schema import PackageInput
 from src.routes.v1.packages.service import PackageService, get_package_service
 from src.routes.v1.releases.schema import ReleaseInput
 from src.routes.v1.releases.service import ReleaseService, get_release_service
-from src.utils.service_tag import ServiceType, service_tag
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -22,7 +21,6 @@ class GCSFilePayload(BaseModel):
     bucket_name: str
 
 
-@service_tag(ServiceType.RELEASES)
 @router.post("/webhooks/releases")
 async def process_releases_webhook(
     payload: GCSFilePayload,

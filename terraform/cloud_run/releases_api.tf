@@ -103,7 +103,7 @@ resource "google_cloud_run_v2_service" "releases_api" {
         container_port = 8080
       }
 
-      # Service type determines which routes are loaded
+      # Service type determines which API modules are imported
       env {
         name  = "SERVICE_TYPE"
         value = "releases"

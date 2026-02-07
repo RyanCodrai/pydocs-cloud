@@ -22,16 +22,24 @@ FROM base AS development-deps
 # Install system dependencies + dev tools
 RUN apt-get update && apt-get install -y make && rm -rf /var/lib/apt/lists/*
 
-# Install ALL dependencies globally (including dev)
-RUN uv pip install --system -r pyproject.toml
+# Install ALL dependencies globally (including dev and all service groups)
+RUN uv export --group user --group releases --group dev --format requirements-txt > requirements.txt && \
+    uv pip install --system -r requirements.txt
 
 # ============================================
 # Production dependencies
 # ============================================
 FROM base AS production-deps
 
-# Generate production-only requirements and install globally (no dev deps)
-RUN uv export --no-dev --format requirements-txt > requirements.txt && \
+# SERVICE_TYPE determines which dependency group to install
+ARG SERVICE_TYPE=releases
+
+# Install base + service-specific dependencies only
+RUN if [ "$SERVICE_TYPE" = "all" ]; then \
+        uv export --no-dev --group user --group releases --format requirements-txt > requirements.txt; \
+    else \
+        uv export --no-dev --group $SERVICE_TYPE --format requirements-txt > requirements.txt; \
+    fi && \
     uv pip install --system -r requirements.txt
 
 # ============================================
