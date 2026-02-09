@@ -7,7 +7,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBPackage
 from src.db.operations import get_db_session
 from src.routes.v1.webhooks.schema import normalize_package_name
-from src.utils.service_tag import ServiceType, service_tag
 
 router = APIRouter()
 
@@ -33,7 +32,6 @@ class PackageLookupResponse(BaseModel):
     last_seen: datetime
 
 
-@service_tag(ServiceType.RELEASES)
 @router.get("/lookup/{ecosystem}/{package_name:path}", response_model=PackageLookupResponse)
 async def lookup_package(
     ecosystem: str,

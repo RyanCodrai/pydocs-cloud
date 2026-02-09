@@ -11,18 +11,15 @@ from src.db.models import DBUser
 from src.routes.v1.users.schema import UserInput, UserOutput
 from src.routes.v1.users.service import UserService, get_user_service
 from src.utils.auth import authenticate_user, authorise_user
-from src.utils.service_tag import ServiceType, service_tag
 
 router = APIRouter()
 
 
-@service_tag(ServiceType.USER)
 @router.get("/users", response_model=UserOutput)
 async def get_user(user: DBUser = Depends(authenticate_user)) -> UserOutput:
     return UserOutput(**user.model_dump())
 
 
-@service_tag(ServiceType.USER)
 @router.patch("/users/{user_id}", response_model=DBUser)
 async def update_user(
     update_user_data: UserInput,
