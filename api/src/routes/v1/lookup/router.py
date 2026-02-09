@@ -1,6 +1,6 @@
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 from src.routes.v1.packages.service import PackageService, get_package_service
 from src.routes.v1.webhooks.schema import normalize_package_name
 from src.utils.embeddings import embed_text
@@ -20,17 +20,6 @@ class EcosystemNotFoundError(HTTPException):
 class SourceCodeNotFoundError(HTTPException):
     def __init__(self, package_name: str):
         super().__init__(status_code=404, detail=f"No source code repository found for '{package_name}'")
-
-
-class LookupParams(BaseModel):
-    ecosystem: str
-    package_name: str
-
-    @model_validator(mode="after")
-    def normalize_name(self):
-        if self.ecosystem == "pypi":
-            self.package_name = normalize_package_name(self.package_name)
-        return self
 
 
 class PackageLookupResponse(BaseModel):
@@ -69,15 +58,19 @@ async def find_github_repos(
 
 @router.get("/lookup/{ecosystem}/{package_name:path}", response_model=PackageLookupResponse)
 async def lookup_package(
-    params: LookupParams = Depends(),
+    ecosystem: str,
+    package_name: str,
     package_service: PackageService = Depends(get_package_service),
 ) -> PackageLookupResponse:
     """Look up the best matching GitHub repository for a package."""
-    if params.ecosystem not in SUPPORTED_ECOSYSTEMS:
-        raise EcosystemNotFoundError(params.ecosystem)
+    if ecosystem not in SUPPORTED_ECOSYSTEMS:
+        raise EcosystemNotFoundError(ecosystem)
+
+    if ecosystem == "pypi":
+        package_name = normalize_package_name(package_name)
 
     package = await package_service.retrieve_by_ecosystem_and_name(
-        ecosystem=params.ecosystem, package_name=params.package_name
+        ecosystem=ecosystem, package_name=package_name
     )
 
     scored_repos = await find_github_repos(
@@ -87,7 +80,7 @@ async def lookup_package(
     )
 
     if not scored_repos:
-        raise SourceCodeNotFoundError(params.package_name)
+        raise SourceCodeNotFoundError(package_name)
 
     best_url, _ = scored_repos[0]
     return PackageLookupResponse(github_url=best_url)
