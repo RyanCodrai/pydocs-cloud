@@ -8,6 +8,7 @@ from sqlmodel import SQLModel
 from src.db.operations import async_engine
 from src.settings import settings
 from src.utils.logger import logger
+from src.utils.npm_sync import lifespans as npm_sync_lifespans
 from src.utils.service_tag import ServiceType
 
 # Store the fastapi signal handler before ray replaces it
@@ -55,10 +56,6 @@ async def database() -> AsyncIterator[None]:
     await async_engine.dispose()
     logger.info("Database connection closed.")
 
-
-# Collect lifespans from all service modules.
-# Each module exports `lifespans` as a list of (ServiceType, coroutine_factory) tuples.
-from src.utils.npm_sync import lifespans as npm_sync_lifespans
 
 all_lifespans = [
     *npm_sync_lifespans,
