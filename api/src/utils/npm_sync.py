@@ -25,7 +25,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBPackage, DBRelease, DBSyncState
 from src.db.operations import managed_session
 from src.settings import settings
-from src.utils.service_tag import ServiceType
 
 logger = logging.getLogger(__name__)
 
@@ -390,4 +389,4 @@ async def npm_sync_lifespan():
     logger.info("npm sync background task stopped")
 
 
-lifespans = [(ServiceType.NPM_SYNC, npm_sync_lifespan)]
+lifespans = [("npm_sync", npm_sync_lifespan)]

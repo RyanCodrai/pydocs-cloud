@@ -7,7 +7,6 @@ from src.db.operations import async_engine
 from src.settings import settings
 from src.utils.logger import logger
 from src.utils.npm_sync import lifespans as npm_sync_lifespans
-from src.utils.service_tag import ServiceType
 
 
 class DatabaseConnectionError(Exception):
@@ -39,7 +38,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await stack.enter_async_context(database())
 
         for service_type, service_lifespan in all_lifespans:
-            if settings.SERVICE_TYPE in (service_type, ServiceType.ALL):
+            if settings.SERVICE_TYPE in (service_type, "all"):
                 await stack.enter_async_context(service_lifespan())
 
         yield
