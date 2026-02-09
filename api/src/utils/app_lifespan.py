@@ -1,5 +1,4 @@
 import asyncio
-import signal
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 
@@ -11,33 +10,9 @@ from src.utils.logger import logger
 from src.utils.npm_sync import lifespans as npm_sync_lifespans
 from src.utils.service_tag import ServiceType
 
-# Store the fastapi signal handler before ray replaces it
-fastapi_signal_handler = signal.getsignal(signal.SIGTERM)
-
 
 class DatabaseConnectionError(Exception):
     """Raised when unable to establish database connection."""
-
-
-# class GracefulShutdownHandler:
-#     def __init__(self, app: FastAPI, original_handler: Callable[[int, Any], Any]) -> None:
-#         self.app = app
-#         self.original_handler = original_handler
-
-#     async def _perform_graceful_shutdown(self, signum: int, frame: Any) -> None:
-#         logger.info(f"Intercepted termination signal {signum}. Initiating graceful shutdown.")
-#         await GlobalWebSocketSessionManager.wait_for_all_closed(timeout=settings.AGENT_SESSION_GRACE_PERIOD)
-#         await BackgroundTaskManager.wait_for_all(timeout=settings.AGENT_SESSION_GRACE_PERIOD)
-#         logger.info("Graceful shutdown completed.")
-#         self.original_handler(signum, frame)
-
-#     def _initiate_graceful_shutdown(self, signum: int, frame: Any) -> None:
-#         asyncio.create_task(self._perform_graceful_shutdown(signum, frame))
-
-#     def setup_graceful_shutdown(self) -> None:
-#         loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
-#         loop.add_signal_handler(signal.SIGTERM, lambda: self._initiate_graceful_shutdown(signal.SIGTERM, None))
-#         logger.info("Graceful shutdown handler set up successfully.")
 
 
 @asynccontextmanager
