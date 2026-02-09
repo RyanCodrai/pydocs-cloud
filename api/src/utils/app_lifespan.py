@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 
@@ -17,7 +16,6 @@ class DatabaseConnectionError(Exception):
 
 @asynccontextmanager
 async def database() -> AsyncIterator[None]:
-    # Initialisation phase
     try:
         async with async_engine.begin() as conn:
             await conn.run_sync(SQLModel.metadata.create_all)
@@ -26,8 +24,6 @@ async def database() -> AsyncIterator[None]:
         error_msg = "Failed to connect to database with settings."
         raise DatabaseConnectionError(error_msg) from exc
     yield
-
-    # Cleanup phase
     await async_engine.dispose()
     logger.info("Database connection closed.")
 
@@ -39,25 +35,11 @@ all_lifespans = [
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    stack = AsyncExitStack()
-    await stack.enter_async_context(database())
+    async with AsyncExitStack() as stack:
+        await stack.enter_async_context(database())
 
-    # Start lifespans matching the current SERVICE_TYPE
-    running_tasks = []
-    for service_type, task_fn in all_lifespans:
-        if settings.SERVICE_TYPE in (service_type, ServiceType.ALL):
-            logger.info(f"Starting background task: {task_fn.__name__}")
-            running_tasks.append(asyncio.create_task(task_fn()))
+        for service_type, service_lifespan in all_lifespans:
+            if settings.SERVICE_TYPE in (service_type, ServiceType.ALL):
+                await stack.enter_async_context(service_lifespan())
 
-    async with stack:
         yield
-
-    # Cancel all background tasks on shutdown
-    for task in running_tasks:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
-    if running_tasks:
-        logger.info(f"Stopped {len(running_tasks)} background task(s)")

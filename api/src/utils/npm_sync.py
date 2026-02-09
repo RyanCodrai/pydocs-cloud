@@ -15,6 +15,7 @@ deployed with SERVICE_TYPE=npm_sync.
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import aiohttp
@@ -350,7 +351,7 @@ async def sync_once(http_session: aiohttp.ClientSession) -> dict:
     }
 
 
-async def run_sync_loop():
+async def _run_sync_loop():
     """
     Main polling loop. Runs forever, fetching changes from the npm registry
     and upserting into the database.
@@ -376,4 +377,17 @@ async def run_sync_loop():
                 await asyncio.sleep(settings.NPM_SYNC_POLL_INTERVAL)
 
 
-lifespans = [(ServiceType.NPM_SYNC, run_sync_loop)]
+@asynccontextmanager
+async def npm_sync_lifespan():
+    logger.info("Starting npm sync background task")
+    task = asyncio.create_task(_run_sync_loop())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+    logger.info("npm sync background task stopped")
+
+
+lifespans = [(ServiceType.NPM_SYNC, npm_sync_lifespan)]
