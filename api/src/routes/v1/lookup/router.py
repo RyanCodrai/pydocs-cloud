@@ -69,15 +69,13 @@ async def find_github_repos(
 
 @router.get("/lookup/{ecosystem}/{package_name:path}", response_model=PackageLookupResponse)
 async def lookup_package(
-    ecosystem: str,
-    package_name: str,
+    params: LookupParams = Depends(),
     package_service: PackageService = Depends(get_package_service),
 ) -> PackageLookupResponse:
     """Look up the best matching GitHub repository for a package."""
-    if ecosystem not in SUPPORTED_ECOSYSTEMS:
-        raise EcosystemNotFoundError(ecosystem)
+    if params.ecosystem not in SUPPORTED_ECOSYSTEMS:
+        raise EcosystemNotFoundError(params.ecosystem)
 
-    params = LookupParams(ecosystem=ecosystem, package_name=package_name)
     package = await package_service.retrieve_by_ecosystem_and_name(
         ecosystem=params.ecosystem, package_name=params.package_name
     )
