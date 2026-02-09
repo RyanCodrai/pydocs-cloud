@@ -15,6 +15,11 @@ router = APIRouter()
 SUPPORTED_ECOSYSTEMS = {"pypi", "npm"}
 
 
+class EcosystemNotFoundError(HTTPException):
+    def __init__(self, ecosystem: str):
+        super().__init__(status_code=404, detail=f"Ecosystem '{ecosystem}' is not supported")
+
+
 class PackageNotFoundError(HTTPException):
     def __init__(self, package_name: str, ecosystem: str):
         super().__init__(status_code=404, detail=f"Package '{package_name}' not found in {ecosystem}")
@@ -67,7 +72,7 @@ async def lookup_package(
 ) -> PackageLookupResponse:
     """Look up the best matching GitHub repository for a package."""
     if ecosystem not in SUPPORTED_ECOSYSTEMS:
-        raise PackageNotFoundError(package_name, ecosystem)
+        raise EcosystemNotFoundError(ecosystem)
 
     if ecosystem == "pypi":
         package_name = normalize_package_name(package_name)
