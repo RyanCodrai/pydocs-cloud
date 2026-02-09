@@ -14,19 +14,12 @@ logger = logging.getLogger(__name__)
 class Settings(BaseSettings):
     QUEUE_PATH: str
     PYPI_PROCESSOR_URL: str
-    NPM_PROCESSOR_URL: str = ""
 
-    @property
-    def PROCESSOR_URLS(self):
+    def get_processor_url(self, ecosystem):
         urls = {
             "pypi": self.PYPI_PROCESSOR_URL,
         }
-        if self.NPM_PROCESSOR_URL:
-            urls["npm"] = self.NPM_PROCESSOR_URL
-        return urls
-
-    def get_processor_url(self, ecosystem):
-        processor_url = self.PROCESSOR_URLS.get(ecosystem)
+        processor_url = urls.get(ecosystem)
         if not processor_url:
             raise ValueError(f"No processor URL configured for ecosystem: {ecosystem}")
         return processor_url
