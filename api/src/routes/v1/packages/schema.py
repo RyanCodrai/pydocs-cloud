@@ -4,8 +4,7 @@ from datetime import datetime
 from typing import Annotated
 
 from pydantic import BaseModel, BeforeValidator
-from src.routes.v1.webhooks.schema import parse_timestamp
-from src.utils.pypi import NormalizedPypiPackageName
+from src.routes.v1.webhooks.schema import NormalizedPypiPackageName, parse_timestamp
 
 
 class PackageInput(BaseModel):

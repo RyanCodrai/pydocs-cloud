@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBPackage
 from src.db.operations import get_db_session
-from src.utils.pypi import normalize_package_name
+from src.routes.v1.webhooks.schema import normalize_package_name
 from src.utils.service_tag import ServiceType, service_tag
 
 router = APIRouter()
