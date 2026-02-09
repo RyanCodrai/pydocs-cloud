@@ -56,36 +56,36 @@ async def database() -> AsyncIterator[None]:
     logger.info("Database connection closed.")
 
 
+# Collect lifespans from all service modules.
+# Each module exports `lifespans` as a list of (ServiceType, coroutine_factory) tuples.
+from src.utils.npm_sync import lifespans as npm_sync_lifespans
+
+all_lifespans = [
+    *npm_sync_lifespans,
+]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    # Initialize signal handler
-    # This sets up graceful shutdown behavior for the application
-
-    # Create an AsyncExitStack for managing async resources
     stack = AsyncExitStack()
     await stack.enter_async_context(database())
-    # You can add more resources to the stack here
 
-    # Start background services based on SERVICE_TYPE
-    npm_sync_task = None
-    if settings.SERVICE_TYPE == ServiceType.NPM_SYNC:
-        from src.utils.npm_sync import run_sync_loop
-
-        logger.info("Starting npm sync background task")
-        npm_sync_task = asyncio.create_task(run_sync_loop())
+    # Start lifespans matching the current SERVICE_TYPE
+    running_tasks = []
+    for service_type, task_fn in all_lifespans:
+        if settings.SERVICE_TYPE in (service_type, ServiceType.ALL):
+            logger.info(f"Starting background task: {task_fn.__name__}")
+            running_tasks.append(asyncio.create_task(task_fn()))
 
     async with stack:
-        # At this point, all resources have been initialized
-        # The application is ready to start serving requests
         yield
 
-    # Cancel background tasks on shutdown
-    if npm_sync_task is not None:
-        npm_sync_task.cancel()
+    # Cancel all background tasks on shutdown
+    for task in running_tasks:
+        task.cancel()
         try:
-            await npm_sync_task
+            await task
         except asyncio.CancelledError:
             pass
-        logger.info("npm sync background task stopped")
-
-    # At this point all resources are cleaned up
+    if running_tasks:
+        logger.info(f"Stopped {len(running_tasks)} background task(s)")

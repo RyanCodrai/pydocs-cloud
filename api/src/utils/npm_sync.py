@@ -24,6 +24,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBPackage, DBRelease, DBSyncState
 from src.db.operations import managed_session
 from src.settings import settings
+from src.utils.service_tag import ServiceType
 
 logger = logging.getLogger(__name__)
 
@@ -373,3 +374,6 @@ async def run_sync_loop():
                 logger.error(f"npm sync: error in sync cycle: {e}", exc_info=True)
                 # Back off on errors to avoid hammering a failing endpoint
                 await asyncio.sleep(settings.NPM_SYNC_POLL_INTERVAL)
+
+
+lifespans = [(ServiceType.NPM_SYNC, run_sync_loop)]
