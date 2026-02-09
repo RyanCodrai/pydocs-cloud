@@ -1,10 +1,7 @@
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from sqlalchemy import select
-from sqlmodel.ext.asyncio.session import AsyncSession
-from src.db.models import DBPackage
-from src.db.operations import get_db_session
+from pydantic import BaseModel, model_validator
+from src.routes.v1.packages.service import PackageService, get_package_service
 from src.routes.v1.webhooks.schema import normalize_package_name
 from src.utils.embeddings import embed_text
 from src.utils.github_extraction import extract_github_candidates
@@ -20,14 +17,20 @@ class EcosystemNotFoundError(HTTPException):
         super().__init__(status_code=404, detail=f"Ecosystem '{ecosystem}' is not supported")
 
 
-class PackageNotFoundError(HTTPException):
-    def __init__(self, package_name: str, ecosystem: str):
-        super().__init__(status_code=404, detail=f"Package '{package_name}' not found in {ecosystem}")
-
-
 class SourceCodeNotFoundError(HTTPException):
     def __init__(self, package_name: str):
         super().__init__(status_code=404, detail=f"No source code repository found for '{package_name}'")
+
+
+class LookupParams(BaseModel):
+    ecosystem: str
+    package_name: str
+
+    @model_validator(mode="after")
+    def normalize_name(self):
+        if self.ecosystem == "pypi":
+            self.package_name = normalize_package_name(self.package_name)
+        return self
 
 
 class PackageLookupResponse(BaseModel):
@@ -68,24 +71,16 @@ async def find_github_repos(
 async def lookup_package(
     ecosystem: str,
     package_name: str,
-    db_session: AsyncSession = Depends(get_db_session),
+    package_service: PackageService = Depends(get_package_service),
 ) -> PackageLookupResponse:
     """Look up the best matching GitHub repository for a package."""
     if ecosystem not in SUPPORTED_ECOSYSTEMS:
         raise EcosystemNotFoundError(ecosystem)
 
-    if ecosystem == "pypi":
-        package_name = normalize_package_name(package_name)
-
-    stmt = select(DBPackage).where(
-        DBPackage.ecosystem == ecosystem,
-        DBPackage.package_name == package_name,
+    params = LookupParams(ecosystem=ecosystem, package_name=package_name)
+    package = await package_service.retrieve_by_ecosystem_and_name(
+        ecosystem=params.ecosystem, package_name=params.package_name
     )
-
-    result = await db_session.exec(stmt)
-    package = result.scalar_one_or_none()
-    if package is None:
-        raise PackageNotFoundError(package_name, ecosystem)
 
     scored_repos = await find_github_repos(
         description=package.description,
@@ -94,7 +89,7 @@ async def lookup_package(
     )
 
     if not scored_repos:
-        raise SourceCodeNotFoundError(package_name)
+        raise SourceCodeNotFoundError(params.package_name)
 
     best_url, _ = scored_repos[0]
     return PackageLookupResponse(github_url=best_url)
