@@ -389,4 +389,4 @@ async def npm_sync_lifespan():
     logger.info("npm sync background task stopped")
 
 
-lifespans = [("npm_sync", npm_sync_lifespan)]
+lifespans = [npm_sync_lifespan]
