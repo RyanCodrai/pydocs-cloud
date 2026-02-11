@@ -20,6 +20,12 @@ class NpmSyncService:
         if not versions:
             return
 
+        # Only process releases newer than what we already have
+        cutoff = await self.release_service.retrieve_latest_timestamp("npm", name)
+        versions = {k: v for k, v in versions.items() if v > cutoff}
+        if not versions:
+            return
+
         project_urls = self._extract_project_urls(packument)
         timestamps = list(versions.values())
 
