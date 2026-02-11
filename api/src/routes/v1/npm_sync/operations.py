@@ -3,6 +3,7 @@ from src.routes.v1.packages.schema import PackageInput
 from src.routes.v1.packages.service import PackageService
 from src.routes.v1.releases.schema import ReleaseInput
 from src.routes.v1.releases.service import ReleaseService
+from src.routes.v1.webhooks.schema import parse_timestamp
 
 
 class NpmSyncService:
@@ -14,7 +15,7 @@ class NpmSyncService:
     async def upsert_packument(self, packument: dict):
         name = packument["name"]
         versions = {
-            k: v for k, v in packument.get("time", {}).items()
+            k: parse_timestamp(v) for k, v in packument.get("time", {}).items()
             if k not in ("created", "modified")
         }
         if not versions:
