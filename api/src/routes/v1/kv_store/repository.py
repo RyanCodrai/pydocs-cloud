@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
@@ -18,10 +18,10 @@ class KvStoreRepository:
     async def upsert(self, key: str, value: str, commit: bool = True) -> None:
         stmt = (
             insert(DBKvStore)
-            .values(key=key, value=value, updated_at=datetime.now(timezone.utc))
+            .values(key=key, value=value, updated_at=datetime.utcnow())
             .on_conflict_do_update(
                 index_elements=["key"],
-                set_={"value": value, "updated_at": datetime.now(timezone.utc)},
+                set_={"value": value, "updated_at": datetime.utcnow()},
             )
         )
         await self.db_session.exec(stmt)
