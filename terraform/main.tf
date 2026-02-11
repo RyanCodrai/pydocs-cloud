@@ -142,7 +142,6 @@ module "secrets" {
 
   # External API keys
   github_token = var.github_token
-  npm_token    = var.npm_token
 
   depends_on = [
     google_project_service.required_apis["secretmanager.googleapis.com"],
