@@ -60,7 +60,7 @@ resource "google_cloud_run_v2_service" "npm_sync_api" {
         network    = data.google_compute_network.default.id
         subnetwork = data.google_compute_subnetwork.default.id
       }
-      egress = "ALL_TRAFFIC"
+      egress = "PRIVATE_RANGES_ONLY"
     }
 
     containers {
@@ -156,7 +156,7 @@ resource "google_cloud_run_v2_service" "npm_sync_api" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "1Gi"
+          memory = "4Gi"
         }
         # CPU always allocated — this service runs a background polling loop
         cpu_idle = false
