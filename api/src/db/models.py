@@ -71,9 +71,9 @@ class DBPackage(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("ecosystem", "package_name", name="unique_package"),)
 
 
-class DBSyncState(SQLModel, table=True):
-    __tablename__ = "sync_state"
+class DBKvStore(SQLModel, table=True):
+    __tablename__ = "kv_store"
 
-    key: str = Field(primary_key=True)  # e.g. "npm_changes_last_seq"
-    value: str  # The stored state value (e.g. a sequence number)
+    key: str = Field(primary_key=True)
+    value: str
     updated_at: datetime = Field(default_factory=datetime.utcnow)
