@@ -12,11 +12,24 @@ class NpmSyncService:
         self.release_service = ReleaseService(db_session=db_session)
         self.db_session = db_session
 
+    async def delete_package(self, name: str):
+        await self.release_service.delete_by_ecosystem_and_name("npm", name, commit=False)
+        await self.package_service.delete_by_ecosystem_and_name("npm", name, commit=False)
+        await self.db_session.commit()
+
     async def upsert_packument(self, packument: dict):
         name = packument["name"]
+        time_field = packument.get("time", {})
+
+        # If the package has been unpublished, remove it from our DB
+        if "unpublished" in time_field:
+            await self.delete_package(name)
+            return
+
         versions = {
-            k: parse_timestamp(v) for k, v in packument.get("time", {}).items()
-            if k not in ("created", "modified")
+            k: parse_timestamp(v)
+            for k, v in time_field.items()
+            if k not in ("created", "modified") and isinstance(v, str)
         }
         if not versions:
             return
@@ -30,24 +43,30 @@ class NpmSyncService:
         project_urls = self._extract_project_urls(packument)
         timestamps = list(versions.values())
 
-        await self.package_service.upsert(PackageInput(
-            ecosystem="npm",
-            package_name=name,
-            description=packument.get("description"),
-            home_page=project_urls.get("homepage"),
-            project_urls=project_urls,
-            first_seen=min(timestamps),
-            last_seen=max(timestamps),
-        ), commit=False)
-
-        for version, published_at in versions.items():
-            await self.release_service.upsert(ReleaseInput(
+        await self.package_service.upsert(
+            PackageInput(
                 ecosystem="npm",
                 package_name=name,
-                version=version,
-                first_seen=published_at,
-                last_seen=published_at,
-            ), commit=False)
+                description=packument.get("readme"),
+                home_page=project_urls.get("homepage"),
+                project_urls=project_urls,
+                first_seen=min(timestamps),
+                last_seen=max(timestamps),
+            ),
+            commit=False,
+        )
+
+        for version, published_at in versions.items():
+            await self.release_service.upsert(
+                ReleaseInput(
+                    ecosystem="npm",
+                    package_name=name,
+                    version=version,
+                    first_seen=published_at,
+                    last_seen=published_at,
+                ),
+                commit=False,
+            )
 
         await self.db_session.commit()
 
