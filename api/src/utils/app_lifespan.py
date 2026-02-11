@@ -6,7 +6,7 @@ from sqlmodel import SQLModel
 from src.db.operations import async_engine
 from src.settings import settings
 from src.utils.logger import logger
-from src.utils.npm_sync import lifespans as npm_sync_lifespans
+from src.routes.v1 import lifespans
 
 
 class DatabaseConnectionError(Exception):
@@ -26,17 +26,12 @@ async def database() -> AsyncIterator[None]:
     logger.info("Database connection closed.")
 
 
-all_lifespans = [
-    *npm_sync_lifespans,
-]
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with AsyncExitStack() as stack:
         await stack.enter_async_context(database())
 
-        for service_lifespan in all_lifespans:
+        for service_lifespan in lifespans:
             await stack.enter_async_context(service_lifespan())
 
         yield

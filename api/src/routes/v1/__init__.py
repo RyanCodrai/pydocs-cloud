@@ -20,6 +20,7 @@ def collect_lifespans() -> list:
 
     if settings.SERVICE_TYPE in {"all", "npm_sync"}:
         from src.routes.v1.npm_sync.router import lifespans as npm_sync_lifespans
+
         lifespans.extend(npm_sync_lifespans)
 
     return lifespans
