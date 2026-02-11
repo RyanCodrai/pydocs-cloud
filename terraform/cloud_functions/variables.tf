@@ -26,4 +26,3 @@ variable "pypi_processor_url" {
   type        = string
   default     = "https://pypi-processor-PLACEHOLDER.run.app"
 }
-

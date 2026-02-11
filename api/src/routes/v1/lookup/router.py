@@ -21,11 +21,6 @@ class SourceCodeNotFoundError(HTTPException):
         super().__init__(status_code=404, detail=f"No source code repository found for '{package_name}'")
 
 
-def get_lookup_params(ecosystem: str, package_name: str) -> LookupParams:
-    if ecosystem not in SUPPORTED_ECOSYSTEMS:
-        raise EcosystemNotFoundError(ecosystem)
-    return LookupParams(ecosystem=ecosystem, package_name=package_name)
-
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
     a_arr = np.array(a)
@@ -56,6 +51,11 @@ async def find_github_repos(
     scored_repos.sort(key=lambda x: x[1], reverse=True)
     return scored_repos
 
+
+def get_lookup_params(ecosystem: str, package_name: str) -> LookupParams:
+    if ecosystem not in SUPPORTED_ECOSYSTEMS:
+        raise EcosystemNotFoundError(ecosystem)
+    return LookupParams(ecosystem=ecosystem, package_name=package_name)
 
 @router.get("/lookup/{ecosystem}/{package_name:path}", response_model=PackageLookupResponse)
 async def lookup_package(

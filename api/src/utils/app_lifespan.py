@@ -12,7 +12,6 @@ from src.utils.npm_sync import lifespans as npm_sync_lifespans
 class DatabaseConnectionError(Exception):
     """Raised when unable to establish database connection."""
 
-
 @asynccontextmanager
 async def database() -> AsyncIterator[None]:
     try:

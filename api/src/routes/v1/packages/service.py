@@ -23,9 +23,8 @@ class PackageAlreadyExists(HTTPException):
 
 
 class PackageNotFound(HTTPException):
-    def __init__(self, package_name: str = "", ecosystem: str = "") -> None:
-        detail = f"Package '{package_name}' not found in {ecosystem}" if package_name else "Package not found"
-        super().__init__(status_code=404, detail=detail)
+    def __init__(self, package_name: str, ecosystem: str) -> None:
+        super().__init__(status_code=404, detail=f"Package '{package_name}' not found in {ecosystem}")
 
 
 async def get_package_service(db_session: AsyncSession = Depends(get_db_session)) -> "PackageService":
