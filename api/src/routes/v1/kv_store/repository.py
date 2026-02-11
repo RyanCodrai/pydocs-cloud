@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBKvStore
@@ -9,8 +10,10 @@ class KvStoreRepository:
     def __init__(self, db_session: AsyncSession) -> None:
         self.db_session = db_session
 
-    async def retrieve(self, key: str) -> DBKvStore | None:
-        return await self.db_session.get(DBKvStore, key)
+    async def retrieve(self, key: str) -> DBKvStore:
+        stmt = select(DBKvStore).where(DBKvStore.key == key)
+        result = await self.db_session.exec(stmt)
+        return result.scalar_one()
 
     async def upsert(self, key: str, value: str, commit: bool = True) -> None:
         stmt = (
