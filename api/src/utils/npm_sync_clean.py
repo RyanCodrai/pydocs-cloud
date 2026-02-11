@@ -67,12 +67,11 @@ class NpmChangesStream:
         return self
 
     async def __anext__(self) -> str:
-        if len(self._buffer) < CHANGES_PAGE_SIZE:
+        if not self._buffer:
             await self._fetch_batch()
 
-        while not self._buffer:
-            await asyncio.sleep(settings.NPM_SYNC_POLL_INTERVAL)
-            await self._fetch_batch()
+        if not self._buffer:
+            raise StopAsyncIteration
 
         return self._buffer.pop(0)
 
