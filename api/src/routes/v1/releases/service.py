@@ -54,5 +54,10 @@ class ReleaseService:
     async def retrieve_latest_timestamp(self, ecosystem: str, package_name: str) -> datetime:
         return await self.repository.retrieve_latest_timestamp(ecosystem=ecosystem, package_name=package_name)
 
+    async def delete_by_ecosystem_and_name(self, ecosystem: str, package_name: str, commit: bool = True) -> None:
+        await self.repository.delete_by_ecosystem_and_name(
+            ecosystem=ecosystem, package_name=package_name, commit=commit
+        )
+
     async def upsert(self, data: ReleaseInput, commit: bool = True) -> DBRelease:
         return await self.repository.upsert(data=data, commit=commit)

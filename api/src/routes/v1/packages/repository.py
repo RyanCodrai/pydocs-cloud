@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBPackage
@@ -31,6 +31,15 @@ class PackageRepository:
         )
         result = await self.db_session.exec(stmt)
         return result.scalar_one()
+
+    async def delete_by_ecosystem_and_name(self, ecosystem: str, package_name: str, commit: bool = True) -> None:
+        stmt = delete(DBPackage).where(
+            DBPackage.ecosystem == ecosystem,
+            DBPackage.package_name == package_name,
+        )
+        await self.db_session.exec(stmt)
+        if commit:
+            await self.db_session.commit()
 
     async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
         # Build the update set dynamically, excluding unset fields and unique keys

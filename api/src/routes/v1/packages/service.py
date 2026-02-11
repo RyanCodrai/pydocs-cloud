@@ -53,5 +53,8 @@ class PackageService:
         except NoResultFound as exc:
             raise PackageNotFound(package_name=package_name, ecosystem=ecosystem) from exc
 
+    async def delete_by_ecosystem_and_name(self, ecosystem: str, package_name: str, commit: bool = True) -> None:
+        await self.repository.delete_by_ecosystem_and_name(ecosystem=ecosystem, package_name=package_name, commit=commit)
+
     async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
         return await self.repository.upsert(data=data, commit=commit)

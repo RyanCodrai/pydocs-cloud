@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBRelease
@@ -40,14 +40,21 @@ class ReleaseRepository:
         return list(result.scalars().all())
 
     async def retrieve_latest_timestamp(self, ecosystem: str, package_name: str) -> datetime:
-        stmt = select(
-            func.coalesce(func.max(DBRelease.first_seen), datetime.min)
-        ).where(
+        stmt = select(func.coalesce(func.max(DBRelease.first_seen), datetime.min)).where(
             DBRelease.ecosystem == ecosystem,
             DBRelease.package_name == package_name,
         )
         result = await self.db_session.exec(stmt)
         return result.scalar_one()
+
+    async def delete_by_ecosystem_and_name(self, ecosystem: str, package_name: str, commit: bool = True) -> None:
+        stmt = delete(DBRelease).where(
+            DBRelease.ecosystem == ecosystem,
+            DBRelease.package_name == package_name,
+        )
+        await self.db_session.exec(stmt)
+        if commit:
+            await self.db_session.commit()
 
     async def upsert(self, data: ReleaseInput, commit: bool = True) -> DBRelease:
         stmt = (
