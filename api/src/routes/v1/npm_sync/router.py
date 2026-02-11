@@ -18,6 +18,7 @@ class NpmChangesStream:
         self.http: aiohttp.ClientSession = None
         self.since = str(0)
         self.buffer: list[str] = []
+        self.sem = asyncio.Semaphore(10)
 
     async def __aenter__(self):
         self.http = aiohttp.ClientSession()
@@ -74,35 +75,33 @@ class NpmChangesStream:
 
     async def process_package(self, package_name: str):
         try:
-            async with self.http.get(
-                f"https://registry.npmjs.org/{quote(package_name, safe='')}",
-                headers={
-                    "User-Agent": "pydocs-npm-sync/1.0 (registry mirror; +https://github.com/RyanCodrai/pydocs-cloud)",
-                    "Accept": "application/json",
-                },
-                timeout=aiohttp.ClientTimeout(total=30),
-            ) as resp:
+            async with (
+                self.sem,
+                managed_session() as session,
+                self.http.get(
+                    f"https://registry.npmjs.org/{quote(package_name, safe='')}",
+                    headers={
+                        "User-Agent": "pydocs-npm-sync/1.0 (registry mirror; +https://github.com/RyanCodrai/pydocs-cloud)",
+                        "Accept": "application/json",
+                    },
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as resp,
+            ):
                 if resp.status == 404:
                     return
                 resp.raise_for_status()
                 packument = await resp.json()
+                await NpmSyncService(session).upsert_packument(packument)
         except Exception as e:
-            logger.warning(f"Failed to fetch packument for {package_name}: {e}")
+            logger.warning(f"Failed to process {package_name}: {e}")
             return
-
-        async with managed_session() as session:
-            await NpmSyncService(session).upsert_packument(packument)
 
 
 async def _run_sync_loop():
     async with NpmChangesStream() as stream:
-        async for package_name in stream:
-            try:
-                await stream.process_package(package_name)
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                logger.error(f"npm sync: error processing {package_name}: {e}", exc_info=True)
+        async with asyncio.TaskGroup() as tg:
+            async for package_name in stream:
+                tg.create_task(stream.process_package(package_name))
 
 
 @asynccontextmanager
