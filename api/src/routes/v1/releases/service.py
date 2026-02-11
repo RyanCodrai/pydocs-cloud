@@ -6,6 +6,7 @@ and handle errors from the repository layer. The service layer ensures that clea
 structures are returned to the API layer while abstracting away database operations.
 """
 
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import Depends, HTTPException
@@ -49,6 +50,9 @@ class ReleaseService:
 
     async def retrieve_by_package(self, ecosystem: str, package_name: str, limit: int | None = None) -> list[DBRelease]:
         return await self.repository.retrieve_by_package(ecosystem=ecosystem, package_name=package_name, limit=limit)
+
+    async def retrieve_latest_timestamp(self, ecosystem: str, package_name: str) -> datetime:
+        return await self.repository.retrieve_latest_timestamp(ecosystem=ecosystem, package_name=package_name)
 
     async def upsert(self, data: ReleaseInput, commit: bool = True) -> DBRelease:
         return await self.repository.upsert(data=data, commit=commit)
