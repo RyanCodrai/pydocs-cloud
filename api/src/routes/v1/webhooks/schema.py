@@ -16,9 +16,6 @@ def normalize_package_name(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
-NormalizedPypiPackageName = Annotated[str, BeforeValidator(normalize_package_name)]
-
-
 def parse_timestamp(value: str | datetime) -> datetime:
     """Parse ISO timestamp to timezone-naive datetime."""
     if isinstance(value, datetime):
