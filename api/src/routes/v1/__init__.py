@@ -15,4 +15,15 @@ def create_router() -> APIRouter:
     return router
 
 
+def collect_lifespans() -> list:
+    lifespans = []
+
+    if settings.SERVICE_TYPE in {"all", "npm_sync"}:
+        from src.routes.v1.npm_sync.router import lifespans as npm_sync_lifespans
+        lifespans.extend(npm_sync_lifespans)
+
+    return lifespans
+
+
 router = create_router()
+lifespans = collect_lifespans()
