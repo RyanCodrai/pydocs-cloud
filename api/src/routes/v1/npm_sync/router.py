@@ -73,7 +73,7 @@ class NpmChangesStream:
                 if resp.status == 404:
                     return
                 resp.raise_for_status()
-                packument = await resp.json()
+                packument = await resp.json(content_type=None)
                 await NpmSyncService(session).upsert_packument(packument)
         except Exception as e:
             logger.warning(f"Failed to process {package_name}: {e}")
@@ -95,6 +95,7 @@ async def _run_sync_loop():
                         tg.create_task(stream.process_package(name))
                 # Phase 3: Update stream pointer
                 await stream.save(stream_progress_pointer)
+                logger.info(f"npm sync: processed {len(names)} packages, seq now {stream_progress_pointer}")
             logger.info("npm sync: caught up with changes feed")
     except asyncio.CancelledError:
         raise
