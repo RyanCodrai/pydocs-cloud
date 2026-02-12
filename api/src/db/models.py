@@ -65,8 +65,8 @@ class DBPackage(SQLModel, table=True):
     project_urls: dict[str, str] = Field(
         default_factory=dict, sa_column=Column(JSONB, nullable=False, server_default="{}")
     )
-    first_seen: datetime
-    last_seen: datetime
+    first_seen: datetime | None = Field(default=None)
+    last_seen: datetime | None = Field(default=None)
 
     __table_args__ = (UniqueConstraint("ecosystem", "package_name", name="unique_package"),)
 
