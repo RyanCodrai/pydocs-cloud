@@ -1,12 +1,11 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
-from urllib.parse import quote
 
 import aiohttp
 from src.db.operations import managed_session
 from src.routes.v1.kv_store.service import KeyNotFound, KvStoreService
-from src.routes.v1.npm_sync.operations import NpmSyncService
+from src.routes.v1.packages.service import PackageService
 from src.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -17,7 +16,6 @@ class NpmChangesStream:
         self.state_key = "npm_changes_last_seq"
         self.http: aiohttp.ClientSession = None
         self.since = str(0)
-        self.sem = asyncio.Semaphore(10)
 
     async def __aenter__(self):
         self.http = aiohttp.ClientSession()
@@ -27,10 +25,9 @@ class NpmChangesStream:
     async def __aexit__(self, *exc):
         await self.http.close()
 
-    async def save(self, value):
-        self.since = value
+    async def save(self):
         async with managed_session() as session:
-            await KvStoreService(session).upsert(self.state_key, str(value))
+            await KvStoreService(session).upsert(self.state_key, self.since)
 
     async def restore(self):
         async with managed_session() as session:
@@ -38,7 +35,10 @@ class NpmChangesStream:
                 result = await KvStoreService(session).retrieve(self.state_key)
                 self.since = result.value
 
-    async def _fetch_batch(self):
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self) -> list[str]:
         async with self.http.get(
             "https://replicate.npmjs.com/registry/_changes",
             params={"since": self.since, "limit": 10000},
@@ -54,48 +54,24 @@ class NpmChangesStream:
 
         changes = [r["id"] for r in data.get("results", [])]
         names = [name for name in changes if not name.startswith("_design/")]
-        return names, data.get("last_seq")
-
-    async def process_package(self, package_name: str):
-        try:
-            async with (
-                self.sem,
-                managed_session() as session,
-                self.http.get(
-                    f"https://registry.npmjs.org/{quote(package_name, safe='')}",
-                    headers={
-                        "User-Agent": "pydocs-npm-sync/1.0 (registry mirror; +https://github.com/RyanCodrai/pydocs-cloud)",
-                        "Accept": "application/json",
-                    },
-                    timeout=aiohttp.ClientTimeout(total=30),
-                ) as resp,
-            ):
-                if resp.status == 404:
-                    return
-                resp.raise_for_status()
-                packument = await resp.json(content_type=None)
-                await NpmSyncService(session).upsert_packument(packument)
-        except Exception as e:
-            logger.warning(f"Failed to process {package_name}: {e}")
+        self.since = str(data.get("last_seq"))
+        if not names:
+            raise StopAsyncIteration
+        return names
 
 
 async def _run_sync_loop():
     try:
         async with NpmChangesStream() as stream:
             logger.info(f"npm sync: starting from seq {stream.since}")
-            while True:
-                # Phase 1: Get 10k changes
-                names, stream_progress_pointer = await stream._fetch_batch()
-                if not names:
-                    await asyncio.sleep(30)
-                    continue
-                # Phase 2: Process all changes
-                async with asyncio.TaskGroup() as tg:
+            async for names in stream:
+                async with managed_session() as session:
+                    service = PackageService(session)
                     for name in names:
-                        tg.create_task(stream.process_package(name))
-                # Phase 3: Update stream pointer
-                await stream.save(stream_progress_pointer)
-                logger.info(f"npm sync: processed {len(names)} packages, seq now {stream_progress_pointer}")
+                        await service.register("npm", name, commit=False)
+                    await session.commit()
+                await stream.save()
+                logger.info(f"npm sync: registered {len(names)} packages, seq now {stream.since}")
             logger.info("npm sync: caught up with changes feed")
     except asyncio.CancelledError:
         raise
