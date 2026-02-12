@@ -17,7 +17,6 @@ class NpmChangesStream:
         self.state_key = "npm_changes_last_seq"
         self.http: aiohttp.ClientSession = None
         self.since = str(0)
-        self.buffer: list[str] = []
         self.sem = asyncio.Semaphore(10)
 
     async def __aenter__(self):
@@ -31,28 +30,13 @@ class NpmChangesStream:
     async def save(self, value):
         self.since = value
         async with managed_session() as session:
-            await KvStoreService(session).upsert(self.state_key, str(self.since))
+            await KvStoreService(session).upsert(self.state_key, str(value))
 
     async def restore(self):
         async with managed_session() as session:
             with suppress(KeyNotFound):
                 result = await KvStoreService(session).retrieve(self.state_key)
                 self.since = result.value
-
-    def __aiter__(self):
-        return self
-
-    async def __anext__(self) -> str:
-        # Populate buffer
-        if not self.buffer:
-            await self._fetch_batch()
-
-        # If buffer could not be populated we've reached the end of the stream
-        if not self.buffer:
-            raise StopAsyncIteration
-
-        # Yield an item of the stream
-        return self.buffer.pop(0)
 
     async def _fetch_batch(self):
         async with self.http.get(
@@ -70,8 +54,7 @@ class NpmChangesStream:
 
         changes = [r["id"] for r in data.get("results", [])]
         names = [name for name in changes if not name.startswith("_design/")]
-        self.buffer.extend(names)
-        await self.save(data.get("last_seq"))
+        return names, data.get("last_seq")
 
     async def process_package(self, package_name: str):
         try:
@@ -94,14 +77,29 @@ class NpmChangesStream:
                 await NpmSyncService(session).upsert_packument(packument)
         except Exception as e:
             logger.warning(f"Failed to process {package_name}: {e}")
-            return
 
 
 async def _run_sync_loop():
-    async with NpmChangesStream() as stream:
-        async with asyncio.TaskGroup() as tg:
-            async for package_name in stream:
-                tg.create_task(stream.process_package(package_name))
+    try:
+        async with NpmChangesStream() as stream:
+            logger.info(f"npm sync: starting from seq {stream.since}")
+            while True:
+                # Phase 1: Get 10k changes
+                names, stream_progress_pointer = await stream._fetch_batch()
+                if not names:
+                    await asyncio.sleep(30)
+                    continue
+                # Phase 2: Process all changes
+                async with asyncio.TaskGroup() as tg:
+                    for name in names:
+                        tg.create_task(stream.process_package(name))
+                # Phase 3: Update stream pointer
+                await stream.save(stream_progress_pointer)
+            logger.info("npm sync: caught up with changes feed")
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        logger.exception("npm sync: sync loop crashed")
 
 
 @asynccontextmanager
