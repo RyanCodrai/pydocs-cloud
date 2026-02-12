@@ -13,12 +13,10 @@ from src.db.models import DBAPIKey, DBUser
 from src.routes.v1.apikeys.schema import APIKeyInput, APIKeyOutput, APIKeyUpdate
 from src.routes.v1.apikeys.service import APIKeyService, get_apikey_service
 from src.utils.auth import authorise_api_key, authorise_user
-from src.utils.service_tag import ServiceType, service_tag
 
 router = APIRouter()
 
 
-@service_tag(ServiceType.USER)
 @router.post("/users/{user_id}/api-keys", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_api_key(
     api_key_data: APIKeyInput,
@@ -30,7 +28,6 @@ async def create_api_key(
     return api_key.model_dump(exclude={"key_hash"})
 
 
-@service_tag(ServiceType.USER)
 @router.get("/users/{user_id}/api-keys", response_model=List[APIKeyOutput])
 async def list_api_keys(
     user: DBUser = Depends(authorise_user),
@@ -40,7 +37,6 @@ async def list_api_keys(
     return await api_key_service.retrieve_by_user(user.id, include_inactive=False)
 
 
-@service_tag(ServiceType.USER)
 @router.patch("/users/{user_id}/api-keys/{api_key_id}", response_model=APIKeyOutput)
 async def update_api_key(
     update_data: APIKeyUpdate,
@@ -51,7 +47,6 @@ async def update_api_key(
     return await api_key_service.update(api_key.id, update_data)
 
 
-@service_tag(ServiceType.USER)
 @router.delete("/users/{user_id}/api-keys/{api_key_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_api_key(
     api_key: DBAPIKey = Depends(authorise_api_key),

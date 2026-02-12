@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # Application Configuration
     LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
     ENVIRONMENT: Literal["LOCAL", "PROD", "TEST", "EVAL"]
-    SERVICE_TYPE: Literal["user", "releases", "all"] = "all"
+    SERVICE_TYPE: Literal["user", "releases", "npm_sync", "all"] = "all"
 
     # Database Configuration
     POSTGRES_DB: str

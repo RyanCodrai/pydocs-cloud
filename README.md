@@ -76,7 +76,7 @@ PyDocs solves a common problem for AI coding agents: when you use a Python packa
 ## Roadmap
 
 - [x] PyPI package support
-- [ ] npm package support
+- [x] npm package support
 - [ ] Maven/Gradle support
 - [ ] RubyGems support
 - [ ] Crates.io (Rust) support

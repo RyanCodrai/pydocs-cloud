@@ -201,6 +201,7 @@ resource "google_secret_manager_secret_version" "github_token" {
 }
 
 
+
 # Grant Cloud Run service account access to all secrets
 locals {
   secrets = {

@@ -15,27 +15,8 @@ class Settings(BaseSettings):
     QUEUE_PATH: str
     PYPI_PROCESSOR_URL: str
 
-    @property
-    def PROCESSOR_URLS(self):
-        return {
-            "pypi": self.PYPI_PROCESSOR_URL,
-            # Add more ecosystems as needed:
-            # 'npm': self.NPM_PROCESSOR_URL,
-        }
-
-    def get_processor_url(self, ecosystem):
-        processor_url = self.PROCESSOR_URLS.get(ecosystem)
-        if not processor_url:
-            raise ValueError(f"No processor URL configured for ecosystem: {ecosystem}")
-        return processor_url
-
 
 settings = Settings()
-
-
-def extract_ecosystem_from_path(file_path):
-    """Extract ecosystem from file path (e.g., releases-split/pypi/file.csv -> pypi)."""
-    return Path(file_path).parts[1]
 
 
 def create_cloud_task(client, file_path, bucket_name):

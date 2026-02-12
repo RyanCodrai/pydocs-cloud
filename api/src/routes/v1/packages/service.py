@@ -23,8 +23,8 @@ class PackageAlreadyExists(HTTPException):
 
 
 class PackageNotFound(HTTPException):
-    def __init__(self) -> None:
-        super().__init__(status_code=404, detail="Package not found")
+    def __init__(self, package_name: str, ecosystem: str) -> None:
+        super().__init__(status_code=404, detail=f"Package '{package_name}' not found in {ecosystem}")
 
 
 async def get_package_service(db_session: AsyncSession = Depends(get_db_session)) -> "PackageService":
@@ -51,7 +51,10 @@ class PackageService:
         try:
             return await self.repository.retrieve_by_ecosystem_and_name(ecosystem=ecosystem, package_name=package_name)
         except NoResultFound as exc:
-            raise PackageNotFound from exc
+            raise PackageNotFound(package_name=package_name, ecosystem=ecosystem) from exc
+
+    async def delete_by_ecosystem_and_name(self, ecosystem: str, package_name: str, commit: bool = True) -> None:
+        await self.repository.delete_by_ecosystem_and_name(ecosystem=ecosystem, package_name=package_name, commit=commit)
 
     async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
         return await self.repository.upsert(data=data, commit=commit)

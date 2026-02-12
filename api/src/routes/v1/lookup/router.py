@@ -1,17 +1,25 @@
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from src.routes.v1.lookup.schema import LookupParams, PackageLookupResponse
 from src.routes.v1.packages.service import PackageService, get_package_service
 from src.utils.embeddings import embed_text
 from src.utils.github_extraction import extract_github_candidates
 from src.utils.github_readme import get_readmes_for_repos
-from src.utils.service_tag import ServiceType, service_tag
 
 router = APIRouter()
 
+SUPPORTED_ECOSYSTEMS = {"pypi", "npm"}
 
-class LookupResponse(BaseModel):
-    github_url: str
+
+class EcosystemNotFoundError(HTTPException):
+    def __init__(self, ecosystem: str):
+        super().__init__(status_code=404, detail=f"Ecosystem '{ecosystem}' is not supported")
+
+
+class SourceCodeNotFoundError(HTTPException):
+    def __init__(self, package_name: str):
+        super().__init__(status_code=404, detail=f"No source code repository found for '{package_name}'")
+
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -44,18 +52,29 @@ async def find_github_repos(
     return scored_repos
 
 
-@service_tag(ServiceType.RELEASES)
-@router.get("/lookup/{package_name}", response_model=LookupResponse)
-async def lookup_github_urls(
-    package_name: str,
+def get_lookup_params(ecosystem: str, package_name: str) -> LookupParams:
+    if ecosystem not in SUPPORTED_ECOSYSTEMS:
+        raise EcosystemNotFoundError(ecosystem)
+    return LookupParams(ecosystem=ecosystem, package_name=package_name)
+
+@router.get("/lookup/{ecosystem}/{package_name:path}", response_model=PackageLookupResponse)
+async def lookup_package(
+    params: LookupParams = Depends(get_lookup_params),
     package_service: PackageService = Depends(get_package_service),
-) -> LookupResponse:
-    """Look up GitHub repository URLs for a package, ranked by similarity."""
-    package = await package_service.retrieve_by_ecosystem_and_name(ecosystem="pypi", package_name=package_name)
-    scored_repos = await find_github_repos(
-        description=package.description, project_urls=package.project_urls, home_page=package.home_page
+) -> PackageLookupResponse:
+    """Look up the best matching GitHub repository for a package."""
+    package = await package_service.retrieve_by_ecosystem_and_name(
+        ecosystem=params.ecosystem, package_name=params.package_name
     )
+
+    scored_repos = await find_github_repos(
+        description=package.description,
+        project_urls=package.project_urls,
+        home_page=package.home_page,
+    )
+
     if not scored_repos:
-        raise HTTPException(status_code=404, detail="No GitHub repository found")
+        raise SourceCodeNotFoundError(params.package_name)
+
     best_url, _ = scored_repos[0]
-    return LookupResponse(github_url=best_url)
+    return PackageLookupResponse(github_url=best_url)
