@@ -41,6 +41,16 @@ class PackageRepository:
         if commit:
             await self.db_session.commit()
 
+    async def register(self, ecosystem: str, package_name: str, commit: bool = True) -> None:
+        stmt = (
+            insert(DBPackage)
+            .values(ecosystem=ecosystem, package_name=package_name)
+            .on_conflict_do_nothing(constraint="unique_package")
+        )
+        await self.db_session.exec(stmt)
+        if commit:
+            await self.db_session.commit()
+
     async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
         # Build the update set dynamically, excluding unset fields and unique keys
         update_dict = data.model_dump(exclude_unset=True, exclude={"ecosystem", "package_name"})
