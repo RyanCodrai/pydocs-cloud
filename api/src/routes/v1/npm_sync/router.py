@@ -77,10 +77,11 @@ async def _process_package(http: aiohttp.ClientSession, sem: asyncio.Semaphore, 
             ) as resp,
         ):
             if resp.status == 404:
+                await NpmSyncService(session).delete_package(package_name)
                 return
             resp.raise_for_status()
             packument = await resp.json(content_type=None)
-            await NpmSyncService(session).upsert_packument(packument)
+            await NpmSyncService(session).upsert_packument(packument, package_name)
     except Exception as e:
         logger.warning(f"Failed to process {package_name}: {e}")
 
@@ -88,31 +89,35 @@ async def _process_package(http: aiohttp.ClientSession, sem: asyncio.Semaphore, 
 async def _run_sync_loop():
     try:
         async with NpmChangesStream() as stream:
-            # Phase 1: Register all package names from changes feed
-            logger.info(f"npm sync phase 1: starting from seq {stream.since}")
-            async for names in stream:
-                async with managed_session() as session:
-                    service = PackageService(session)
-                    for name in names:
-                        await service.register("npm", name, commit=False)
-                    await session.commit()
-                await stream.save()
-                logger.info(f"npm sync phase 1: registered {len(names)} packages, seq now {stream.since}")
-            logger.info("npm sync phase 1: caught up with changes feed")
-
-            # Phase 2: Process unprocessed packages (fetch packument + upsert metadata)
-            logger.info("npm sync phase 2: processing unprocessed packages")
-            sem = asyncio.Semaphore(25)
+            sem = asyncio.Semaphore(100)
             while True:
-                async with managed_session() as session:
-                    names = await PackageService(session).retrieve_unprocessed("npm")
-                if not names:
-                    break
-                async with asyncio.TaskGroup() as tg:
-                    for name in names:
-                        tg.create_task(_process_package(stream.http, sem, name))
-                logger.info(f"npm sync phase 2: processed {len(names)} packages")
-            logger.info("npm sync phase 2: complete")
+                # Phase 1: Register all package names from changes feed
+                logger.info(f"npm sync phase 1: starting from seq {stream.since}")
+                async for names in stream:
+                    async with managed_session() as session:
+                        service = PackageService(session)
+                        for name in names:
+                            await service.register("npm", name, commit=False)
+                        await session.commit()
+                    await stream.save()
+                    logger.info(f"npm sync phase 1: registered {len(names)} packages, seq now {stream.since}")
+                logger.info("npm sync phase 1: caught up with changes feed")
+
+                # Phase 2: Process unprocessed packages (fetch packument + upsert metadata)
+                logger.info("npm sync phase 2: processing unprocessed packages")
+                while True:
+                    async with managed_session() as session:
+                        names = await PackageService(session).retrieve_unprocessed("npm")
+                    if not names:
+                        break
+                    async with asyncio.TaskGroup() as tg:
+                        for name in names:
+                            tg.create_task(_process_package(stream.http, sem, name))
+                    logger.info(f"npm sync phase 2: processed {len(names)} packages")
+                logger.info("npm sync phase 2: complete")
+
+                logger.info("npm sync: sleeping 30s before next cycle")
+                await asyncio.sleep(30)
     except asyncio.CancelledError:
         raise
     except Exception:
