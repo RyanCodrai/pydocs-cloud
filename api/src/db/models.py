@@ -5,7 +5,6 @@ from sqlalchemy import Column, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-
 # class DBUser(SQLModel, table=True):
 #     __tablename__ = "users"
 #     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -64,6 +63,7 @@ class DBPackage(SQLModel, table=True):
     project_urls: dict[str, str] = Field(
         default_factory=dict, sa_column=Column(JSONB, nullable=False, server_default="{}")
     )
+    source_code: str | None = Field(default=None)
     first_seen: datetime | None = Field(default=None, index=True)
     last_seen: datetime | None = Field(default=None, index=True)
 
