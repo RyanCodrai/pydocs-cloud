@@ -4,7 +4,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBPackage
-from src.routes.v1.packages.schema import PackageInput
+from src.routes.v1.packages.schema import PackageInput, PackageUpdate
 
 
 class PackageRepository:
@@ -60,6 +60,14 @@ class PackageRepository:
         await self.db_session.exec(stmt)
         if commit:
             await self.db_session.commit()
+
+    async def update(self, package: DBPackage, data: PackageUpdate, commit: bool = True) -> DBPackage:
+        for field, value in data.model_dump(exclude_unset=True).items():
+            setattr(package, field, value)
+        if commit:
+            await self.db_session.commit()
+            await self.db_session.refresh(package)
+        return package
 
     async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
         # Build the update set dynamically, excluding unset fields and unique keys
