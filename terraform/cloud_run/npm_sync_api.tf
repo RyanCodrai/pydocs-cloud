@@ -155,8 +155,8 @@ resource "google_cloud_run_v2_service" "npm_sync_api" {
 
       resources {
         limits = {
-          cpu    = "1"
-          memory = "4Gi"
+          cpu    = "2"
+          memory = "2Gi"
         }
         # CPU always allocated — this service runs a background polling loop
         cpu_idle = false
@@ -178,6 +178,7 @@ resource "google_cloud_run_v2_service" "npm_sync_api" {
           path = "/health"
           port = 8080
         }
+        timeout_seconds   = 10
         period_seconds    = 30
         failure_threshold = 3
       }

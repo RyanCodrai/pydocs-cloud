@@ -13,3 +13,5 @@ For infrastructure changes (GCS buckets, databases, cloud resources), always ask
 ## Communication
 
 When the user asks a question, answer it. Don't infer that a question is a request to take action (e.g. delete, refactor, change something). Wait for explicit instructions before modifying code.
+
+Do not guess or estimate values. If you don't know something (e.g. database max connections, resource limits, configuration values), look it up or run a command to find the actual answer.

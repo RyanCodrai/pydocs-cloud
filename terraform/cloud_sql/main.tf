@@ -34,10 +34,10 @@ resource "google_sql_database_instance" "pydocs" {
   region           = var.region
 
   settings {
-    tier              = "db-custom-2-7680"
+    tier              = "db-custom-4-8192"
     availability_type = "ZONAL"
     disk_type         = "PD_SSD"
-    disk_size         = 20
+    disk_size         = 37
 
     backup_configuration {
       enabled                        = true

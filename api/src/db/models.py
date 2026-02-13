@@ -44,13 +44,12 @@ class DBRelease(SQLModel, table=True):
     __tablename__ = "releases"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    ecosystem: str = Field(index=True)
-    package_name: str = Field(index=True)
+    ecosystem: str
+    package_name: str
     version: str
-    first_seen: datetime  # When we first saw this version
-    last_seen: datetime  # Most recent time we saw this version
+    first_seen: datetime = Field(index=True)  # When we first saw this version
+    last_seen: datetime = Field(index=True)  # Most recent time we saw this version
 
-    # Composite unique constraint acts as logical primary key
     __table_args__ = (UniqueConstraint("ecosystem", "package_name", "version", name="unique_release"),)
 
 
@@ -58,15 +57,15 @@ class DBPackage(SQLModel, table=True):
     __tablename__ = "packages"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    ecosystem: str = Field(index=True)
-    package_name: str = Field(index=True)
+    ecosystem: str
+    package_name: str
     description: str | None = Field(default=None)
     home_page: str | None = Field(default=None)
     project_urls: dict[str, str] = Field(
         default_factory=dict, sa_column=Column(JSONB, nullable=False, server_default="{}")
     )
-    first_seen: datetime
-    last_seen: datetime
+    first_seen: datetime | None = Field(default=None, index=True)
+    last_seen: datetime | None = Field(default=None, index=True)
 
     __table_args__ = (UniqueConstraint("ecosystem", "package_name", name="unique_package"),)
 
