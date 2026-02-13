@@ -14,7 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBPackage
 from src.db.operations import get_db_session
 from src.routes.v1.packages.repository import PackageRepository
-from src.routes.v1.packages.schema import PackageInput
+from src.routes.v1.packages.schema import PackageInput, PackageUpdate
 
 
 class PackageAlreadyExists(HTTPException):
@@ -61,6 +61,9 @@ class PackageService:
 
     async def delete_by_ecosystem_and_name(self, ecosystem: str, package_name: str, commit: bool = True) -> None:
         await self.repository.delete_by_ecosystem_and_name(ecosystem=ecosystem, package_name=package_name, commit=commit)
+
+    async def update(self, package: DBPackage, data: PackageUpdate, commit: bool = True) -> DBPackage:
+        return await self.repository.update(package=package, data=data, commit=commit)
 
     async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
         return await self.repository.upsert(data=data, commit=commit)

@@ -1,6 +1,7 @@
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
 from src.routes.v1.lookup.schema import LookupParams, PackageLookupResponse
+from src.routes.v1.packages.schema import PackageUpdate
 from src.routes.v1.packages.service import PackageService, get_package_service
 from src.utils.embeddings import embed_text
 from src.utils.github_extraction import extract_github_candidates
@@ -19,7 +20,6 @@ class EcosystemNotFoundError(HTTPException):
 class SourceCodeNotFoundError(HTTPException):
     def __init__(self, package_name: str):
         super().__init__(status_code=404, detail=f"No source code repository found for '{package_name}'")
-
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -57,6 +57,7 @@ def get_lookup_params(ecosystem: str, package_name: str) -> LookupParams:
         raise EcosystemNotFoundError(ecosystem)
     return LookupParams(ecosystem=ecosystem, package_name=package_name)
 
+
 @router.get("/lookup/{ecosystem}/{package_name:path}", response_model=PackageLookupResponse)
 async def lookup_package(
     params: LookupParams = Depends(get_lookup_params),
@@ -67,6 +68,9 @@ async def lookup_package(
         ecosystem=params.ecosystem, package_name=params.package_name
     )
 
+    if package.source_code:
+        return PackageLookupResponse(github_url=package.source_code)
+
     scored_repos = await find_github_repos(
         description=package.description,
         project_urls=package.project_urls,
@@ -76,5 +80,6 @@ async def lookup_package(
     if not scored_repos:
         raise SourceCodeNotFoundError(params.package_name)
 
-    best_url, _ = scored_repos[0]
+    best_url = scored_repos[0][0]
+    await package_service.update(package, PackageUpdate(source_code=best_url))
     return PackageLookupResponse(github_url=best_url)
