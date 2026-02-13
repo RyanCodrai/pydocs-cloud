@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_HOST: str
     POSTGRES_PORT: str
-    DATABASE_POOL_SIZE: int = 100
-    DATABASE_POOL_SIZE_OVERFLOW: int = 200
+    DATABASE_POOL_SIZE: int = 20
+    DATABASE_POOL_SIZE_OVERFLOW: int = 5
 
     # Optional Auth0 Configuration
     AUTH0_DOMAIN: Optional[str] = None
