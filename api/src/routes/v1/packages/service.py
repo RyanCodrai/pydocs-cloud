@@ -53,7 +53,7 @@ class PackageService:
         except NoResultFound as exc:
             raise PackageNotFound(package_name=package_name, ecosystem=ecosystem) from exc
 
-    async def retrieve_unprocessed(self, ecosystem: str, limit: int = 1000) -> list[str]:
+    async def retrieve_unprocessed(self, ecosystem: str, limit: int = 100) -> list[str]:
         return await self.repository.retrieve_unprocessed(ecosystem=ecosystem, limit=limit)
 
     async def register(self, ecosystem: str, package_name: str, commit: bool = True) -> None:

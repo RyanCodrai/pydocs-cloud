@@ -41,10 +41,11 @@ class PackageRepository:
         if commit:
             await self.db_session.commit()
 
-    async def retrieve_unprocessed(self, ecosystem: str, limit: int = 1000) -> list[str]:
+    async def retrieve_unprocessed(self, ecosystem: str, limit: int = 100) -> list[str]:
         stmt = (
             select(DBPackage.package_name)
             .where(DBPackage.ecosystem == ecosystem, DBPackage.first_seen.is_(None))
+            .order_by(func.random())
             .limit(limit)
         )
         result = await self.db_session.exec(stmt)
