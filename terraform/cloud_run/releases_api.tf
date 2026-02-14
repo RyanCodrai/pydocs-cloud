@@ -64,22 +64,14 @@ resource "google_storage_bucket_iam_member" "releases_api_bucket_access" {
 
 # Cloud Run service for releases API
 resource "google_cloud_run_v2_service" "releases_api" {
-  name     = "pydocs-releases-api"
-  location = var.region
-  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"  # Only internal access (for Cloud Tasks)
-
-  # NOTE: After deployment, manually click "Allow public access" in the Cloud Run console
-  # to disable the IAM invoker check. This is required due to organization policy restrictions
-  # that prevent setting this via Terraform.
+  name                 = "pydocs-releases-api"
+  location             = var.region
+  ingress              = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"  # Only internal access (for Cloud Tasks)
+  invoker_iam_disabled = true
 
   template {
     service_account = google_service_account.releases_api.email
     timeout         = "300s"  # 5 minute timeout for processing batches
-
-    # Disable IAM invoker check to allow unauthenticated access
-    annotations = {
-      "run.googleapis.com/invoker-iam-disabled" = "true"
-    }
 
     # Scale from 0 to 100 instances (handles high throughput from Cloud Tasks)
     scaling {
