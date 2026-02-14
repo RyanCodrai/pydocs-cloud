@@ -28,16 +28,7 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
     return float(np.dot(a_arr, b_arr) / (np.linalg.norm(a_arr) * np.linalg.norm(b_arr)))
 
 
-async def find_github_repos(
-    description: str | None,
-    project_urls: dict[str, str],
-    home_page: str | None,
-) -> list[tuple[str, float]]:
-    """Find and rank GitHub repositories from package metadata."""
-    candidates = extract_github_candidates(description=description, project_urls=project_urls, home_page=home_page)
-
-    if not candidates:
-        return []
+async def rank_github_repos(candidates: list[str], description: str) -> list[tuple[str, float]]:
 
     repos_with_readmes = await get_readmes_for_repos(candidates)
     description_embedding = await embed_text(description)
@@ -71,15 +62,21 @@ async def lookup_package(
     if package.source_code:
         return PackageLookupResponse(github_url=package.source_code)
 
-    scored_repos = await find_github_repos(
+    candidates = extract_github_candidates(
         description=package.description,
         project_urls=package.project_urls,
         home_page=package.home_page,
     )
 
-    if not scored_repos:
+    if not candidates:
         raise SourceCodeNotFoundError(params.package_name)
 
-    best_url = scored_repos[0][0]
+    if not package.description:
+        best_url = candidates[0]
+        await package_service.update(package, PackageUpdate(source_code=best_url))
+        return PackageLookupResponse(github_url=best_url)
+
+    scored_repos = await rank_github_repos(candidates, package.description)
+    best_url = scored_repos[0][0] if scored_repos else candidates[0]
     await package_service.update(package, PackageUpdate(source_code=best_url))
     return PackageLookupResponse(github_url=best_url)
