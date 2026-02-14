@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import case, delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBPackage
@@ -70,22 +70,29 @@ class PackageRepository:
         return package
 
     async def upsert(self, data: PackageInput, commit: bool = True) -> DBPackage:
-        # Build the update set dynamically, excluding unset fields and unique keys
-        update_dict = data.model_dump(exclude_unset=True, exclude={"ecosystem", "package_name"})
+        stmt = insert(DBPackage).values(**data.model_dump())
+        excluded = stmt.excluded
 
-        # Always update first_seen and last_seen with min/max logic
+        # Only update metadata fields when the incoming data is newer
+        update_dict = {}
+        for field, value in data.model_dump(exclude_unset=True, exclude={"ecosystem", "package_name"}).items():
+            if field not in {"description", "home_page", "project_urls"}:
+                update_dict[field] = value
+                continue
+
+            if field in {"description", "home_page", "project_urls"}:
+                update_dict[field] = case(
+                    (excluded[field].is_not(None) & (excluded.last_seen > DBPackage.last_seen), excluded[field]),
+                    else_=getattr(DBPackage, field),
+                )
+
         update_dict["first_seen"] = func.least(DBPackage.first_seen, data.first_seen)
         update_dict["last_seen"] = func.greatest(DBPackage.last_seen, data.last_seen)
 
-        stmt = (
-            insert(DBPackage)
-            .values(**data.model_dump())
-            .on_conflict_do_update(
-                constraint="unique_package",
-                set_=update_dict,
-            )
-            .returning(DBPackage)
-        )
+        stmt = stmt.on_conflict_do_update(
+            constraint="unique_package",
+            set_=update_dict,
+        ).returning(DBPackage)
 
         result = await self.db_session.exec(stmt)
         if commit:
