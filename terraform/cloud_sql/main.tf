@@ -37,7 +37,7 @@ resource "google_sql_database_instance" "pydocs" {
     tier              = "db-custom-4-8192"
     availability_type = "ZONAL"
     disk_type         = "PD_SSD"
-    disk_size         = 37
+    disk_size         = 43
 
     backup_configuration {
       enabled                        = true
