@@ -80,11 +80,10 @@ class PackageRepository:
                 update_dict[field] = value
                 continue
 
-            if field in {"description", "home_page", "project_urls"}:
-                update_dict[field] = case(
-                    (excluded[field].is_not(None) & (excluded.last_seen > DBPackage.last_seen), excluded[field]),
-                    else_=getattr(DBPackage, field),
-                )
+            update_dict[field] = case(
+                (excluded[field].is_not(None) & (excluded.last_seen > DBPackage.last_seen), excluded[field]),
+                else_=getattr(DBPackage, field),
+            )
 
         update_dict["first_seen"] = func.least(DBPackage.first_seen, data.first_seen)
         update_dict["last_seen"] = func.greatest(DBPackage.last_seen, data.last_seen)
