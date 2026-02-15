@@ -10,22 +10,11 @@ from typing import List
 
 from fastapi import APIRouter, Depends, status
 from src.db.models import DBAPIKey, DBUser
-from src.routes.v1.apikeys.schema import APIKeyInput, APIKeyOutput, APIKeyUpdate
+from src.routes.v1.apikeys.schema import APIKeyOutput, APIKeyUpdate
 from src.routes.v1.apikeys.service import APIKeyService, get_apikey_service
 from src.utils.auth import authorise_api_key, authorise_user
 
 router = APIRouter()
-
-
-@router.post("/users/{user_id}/api-keys", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def create_api_key(
-    api_key_data: APIKeyInput,
-    user: DBUser = Depends(authorise_user),
-    api_key_service: APIKeyService = Depends(get_apikey_service),
-) -> dict:
-    """Create a new API key for the user. Returns the key once - store it safely!"""
-    api_key = await api_key_service.create(user_id=user.id, key_name=api_key_data.key_name)
-    return api_key.model_dump(exclude={"key_hash"})
 
 
 @router.get("/users/{user_id}/api-keys", response_model=List[APIKeyOutput])

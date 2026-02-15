@@ -143,6 +143,10 @@ module "secrets" {
   # External API keys
   github_token = var.github_token
 
+  # GitHub App OAuth
+  github_app_client_id     = var.github_app_client_id
+  github_app_client_secret = var.github_app_client_secret
+
   depends_on = [
     google_project_service.required_apis["secretmanager.googleapis.com"],
     module.cloud_sql

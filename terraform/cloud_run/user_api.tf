@@ -1,25 +1,14 @@
-# PyDocs Releases API - Cloud Run Service
-# This service processes package releases and MUST never miss an event
+# PyDocs User API - Cloud Run Service
+# Public-facing service for user auth, API keys, and external API access (api.sourced.dev)
 
-# Reference the default VPC network
-data "google_compute_network" "default" {
-  name = "default"
+# Service account for user API
+resource "google_service_account" "user_api" {
+  account_id   = "pydocs-user-api"
+  display_name = "Service Account for PyDocs User API"
 }
 
-# Get the subnet for the region
-data "google_compute_subnetwork" "default" {
-  name   = "default"
-  region = var.region
-}
-
-# Service account for releases API
-resource "google_service_account" "releases_api" {
-  account_id   = "pydocs-releases-api"
-  display_name = "Service Account for PyDocs Releases API"
-}
-
-# Grant Secret Manager access to releases API service account
-resource "google_secret_manager_secret_iam_member" "releases_api_secrets" {
+# Grant Secret Manager access to user API service account
+resource "google_secret_manager_secret_iam_member" "user_api_secrets" {
   for_each = toset([
     "logging-level",
     "app-environment",
@@ -28,51 +17,51 @@ resource "google_secret_manager_secret_iam_member" "releases_api_secrets" {
     "postgres-password",
     "postgres-host",
     "postgres-port",
-    "github-token",
+    "github-app-client-id",
+    "github-app-client-secret",
   ])
 
   secret_id = each.value
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.releases_api.email}"
+  member    = "serviceAccount:${google_service_account.user_api.email}"
+}
+
+# Grant Vertex AI User role for embeddings (lookup)
+resource "google_project_iam_member" "user_api_vertex_ai" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.user_api.email}"
+}
+
+# Grant Storage Object Admin role for GCS bucket access (lookup caching)
+resource "google_storage_bucket_iam_member" "user_api_bucket_access" {
+  bucket = var.data_bucket_name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.user_api.email}"
 }
 
 # Grant Cloud SQL Client role for database access
-resource "google_project_iam_member" "releases_api_cloudsql" {
+resource "google_project_iam_member" "user_api_cloudsql" {
   project = var.project_id
   role    = "roles/cloudsql.client"
-  member  = "serviceAccount:${google_service_account.releases_api.email}"
+  member  = "serviceAccount:${google_service_account.user_api.email}"
 }
 
-# Grant Vertex AI User role for embeddings
-resource "google_project_iam_member" "releases_api_vertex_ai" {
-  project = var.project_id
-  role    = "roles/aiplatform.user"
-  member  = "serviceAccount:${google_service_account.releases_api.email}"
-}
-
-# Grant Storage Object Admin role for reading and deleting split files
-resource "google_storage_bucket_iam_member" "releases_api_bucket_access" {
-  bucket = var.data_bucket_name
-  role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.releases_api.email}"
-}
-
-
-# Cloud Run service for releases API
-resource "google_cloud_run_v2_service" "releases_api" {
-  name                 = "pydocs-releases-api"
+# Cloud Run service for user API
+resource "google_cloud_run_v2_service" "user_api" {
+  name                 = "pydocs-user-api"
   location             = var.region
-  ingress              = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"  # Only internal access (for Cloud Tasks)
+  ingress              = "INGRESS_TRAFFIC_ALL"  # Public-facing, sits behind global load balancer
   invoker_iam_disabled = true
 
   template {
-    service_account = google_service_account.releases_api.email
-    timeout         = "300s"  # 5 minute timeout for processing batches
+    service_account = google_service_account.user_api.email
+    timeout         = "300s"
 
-    # Scale from 0 to 100 instances (handles high throughput from Cloud Tasks)
+    # Scale from 0 to 10 instances (user traffic is lighter)
     scaling {
       min_instance_count = 0
-      max_instance_count = 100
+      max_instance_count = 10
     }
 
     # VPC connector for Cloud SQL access
@@ -94,18 +83,7 @@ resource "google_cloud_run_v2_service" "releases_api" {
       # Service type determines which routes are loaded
       env {
         name  = "SERVICE_TYPE"
-        value = "releases"
-      }
-
-      # Vertex AI configuration for embeddings
-      env {
-        name  = "GOOGLE_CLOUD_PROJECT"
-        value = var.project_id
-      }
-
-      env {
-        name  = "GOOGLE_CLOUD_LOCATION"
-        value = var.region
+        value = "user"
       }
 
       # Environment configuration
@@ -180,12 +158,22 @@ resource "google_cloud_run_v2_service" "releases_api" {
         }
       }
 
-      # External API keys
+      # GitHub App OAuth
       env {
-        name = "GITHUB_TOKEN"
+        name = "GITHUB_APP_CLIENT_ID"
         value_source {
           secret_key_ref {
-            secret  = "github-token"
+            secret  = "github-app-client-id"
+            version = "latest"
+          }
+        }
+      }
+
+      env {
+        name = "GITHUB_APP_CLIENT_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = "github-app-client-secret"
             version = "latest"
           }
         }
@@ -194,7 +182,7 @@ resource "google_cloud_run_v2_service" "releases_api" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "1Gi"
+          memory = "512Mi"
         }
         cpu_idle = true  # Request-based billing: CPU only allocated during request processing
       }
@@ -211,24 +199,17 @@ resource "google_cloud_run_v2_service" "releases_api" {
       }
     }
 
-    max_instance_request_concurrency = 10
+    max_instance_request_concurrency = 80
   }
 
   labels = {
-    service_type = "releases"
+    service_type = "user"
     managed_by   = "terraform"
     environment  = var.environment
   }
 
   depends_on = [
-    google_secret_manager_secret_iam_member.releases_api_secrets,
-    google_project_iam_member.releases_api_cloudsql,
+    google_secret_manager_secret_iam_member.user_api_secrets,
+    google_project_iam_member.user_api_cloudsql,
   ]
-}
-
-
-
-# Get project number for Cloud Tasks service account
-data "google_project" "project" {
-  project_id = var.project_id
 }

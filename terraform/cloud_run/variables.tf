@@ -32,3 +32,9 @@ variable "data_bucket_name" {
   type        = string
 }
 
+variable "user_api_domain" {
+  description = "Custom domain for the user API (e.g., api.sourced.dev)"
+  type        = string
+  default     = "api.sourced.dev"
+}
+

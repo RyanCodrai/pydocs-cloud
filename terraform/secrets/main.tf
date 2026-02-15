@@ -123,63 +123,6 @@ resource "google_secret_manager_secret_version" "postgres_port" {
   secret_data = var.postgres_port
 }
 
-# Auth0 Configuration
-resource "google_secret_manager_secret" "auth0_domain" {
-  secret_id = "auth0-domain"
-
-  replication {
-    auto {}
-  }
-
-  labels = {
-    environment = var.environment
-    managed_by  = "terraform"
-    category    = "auth"
-  }
-}
-
-resource "google_secret_manager_secret" "auth0_issuer" {
-  secret_id = "auth0-issuer"
-
-  replication {
-    auto {}
-  }
-
-  labels = {
-    environment = var.environment
-    managed_by  = "terraform"
-    category    = "auth"
-  }
-}
-
-resource "google_secret_manager_secret" "auth0_client_id" {
-  secret_id = "auth0-client-id"
-
-  replication {
-    auto {}
-  }
-
-  labels = {
-    environment = var.environment
-    managed_by  = "terraform"
-    category    = "auth"
-  }
-}
-
-resource "google_secret_manager_secret" "auth0_algorithms" {
-  secret_id = "auth0-algorithms"
-
-  replication {
-    auto {}
-  }
-
-  labels = {
-    environment = var.environment
-    managed_by  = "terraform"
-    category    = "auth"
-  }
-}
-
 # External API Keys
 resource "google_secret_manager_secret" "github_token" {
   secret_id = "github-token"
@@ -200,7 +143,44 @@ resource "google_secret_manager_secret_version" "github_token" {
   secret_data = var.github_token
 }
 
+# GitHub App OAuth Configuration
+resource "google_secret_manager_secret" "github_app_client_id" {
+  secret_id = "github-app-client-id"
 
+  replication {
+    auto {}
+  }
+
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+    category    = "auth"
+  }
+}
+
+resource "google_secret_manager_secret_version" "github_app_client_id" {
+  secret      = google_secret_manager_secret.github_app_client_id.id
+  secret_data = var.github_app_client_id
+}
+
+resource "google_secret_manager_secret" "github_app_client_secret" {
+  secret_id = "github-app-client-secret"
+
+  replication {
+    auto {}
+  }
+
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+    category    = "auth"
+  }
+}
+
+resource "google_secret_manager_secret_version" "github_app_client_secret" {
+  secret      = google_secret_manager_secret.github_app_client_secret.id
+  secret_data = var.github_app_client_secret
+}
 
 # Grant Cloud Run service account access to all secrets
 locals {
@@ -212,11 +192,9 @@ locals {
     postgres-password    = data.google_secret_manager_secret.postgres_password.id
     postgres-host        = google_secret_manager_secret.postgres_host.id
     postgres-port        = google_secret_manager_secret.postgres_port.id
-    auth0-domain         = google_secret_manager_secret.auth0_domain.id
-    auth0-issuer         = google_secret_manager_secret.auth0_issuer.id
-    auth0-client-id      = google_secret_manager_secret.auth0_client_id.id
-    auth0-algorithms     = google_secret_manager_secret.auth0_algorithms.id
-    github-token         = google_secret_manager_secret.github_token.id
+    github-token              = google_secret_manager_secret.github_token.id
+    github-app-client-id      = google_secret_manager_secret.github_app_client_id.id
+    github-app-client-secret  = google_secret_manager_secret.github_app_client_secret.id
   }
 }
 

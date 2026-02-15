@@ -1,8 +1,10 @@
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
+from src.db.models import DBUser
 from src.routes.v1.lookup.schema import LookupParams, PackageLookupResponse
 from src.routes.v1.packages.schema import PackageUpdate
 from src.routes.v1.packages.service import PackageService, get_package_service
+from src.utils.auth import authenticate_user
 from src.utils.embeddings import embed_text
 from src.utils.github_extraction import extract_github_candidates
 from src.utils.github_readme import get_readmes_for_repos
@@ -32,6 +34,7 @@ async def find_github_repos(
     description: str | None,
     project_urls: dict[str, str],
     home_page: str | None,
+    github_token: str,
 ) -> list[tuple[str, float]]:
     """Find and rank GitHub repositories from package metadata."""
     candidates = extract_github_candidates(description=description, project_urls=project_urls, home_page=home_page)
@@ -39,7 +42,7 @@ async def find_github_repos(
     if not candidates:
         return []
 
-    repos_with_readmes = await get_readmes_for_repos(candidates)
+    repos_with_readmes = await get_readmes_for_repos(candidates, github_token)
     description_embedding = await embed_text(description)
 
     scored_repos = []
@@ -62,6 +65,7 @@ def get_lookup_params(ecosystem: str, package_name: str) -> LookupParams:
 async def lookup_package(
     params: LookupParams = Depends(get_lookup_params),
     package_service: PackageService = Depends(get_package_service),
+    user: DBUser = Depends(authenticate_user),
 ) -> PackageLookupResponse:
     """Look up the best matching GitHub repository for a package."""
     package = await package_service.retrieve_by_ecosystem_and_name(
@@ -75,6 +79,7 @@ async def lookup_package(
         description=package.description,
         project_urls=package.project_urls,
         home_page=package.home_page,
+        github_token=user.github_token,
     )
 
     if not scored_repos:
