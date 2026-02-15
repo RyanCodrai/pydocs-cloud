@@ -5,6 +5,7 @@ handles key generation, hashing, validation, and orchestrates repository operati
 maintaining separation of concerns from the data access layer.
 """
 
+import hashlib
 import uuid
 
 from fastapi import Depends, HTTPException
@@ -47,7 +48,7 @@ class APIKeyService:
 
     async def retrieve_by_hash(self, api_key: str) -> DBAPIKey:
         """Retrieve and validate an API key by its full key value."""
-        key_hash = APIKeyInput(api_key=api_key).key_hash
+        key_hash = hashlib.sha256(api_key.encode()).hexdigest()
         try:
             return await self.repository.retrieve_by_hash(key_hash)
         except NoResultFound as exc:
