@@ -1,8 +1,10 @@
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
+from src.db.models import DBUser
 from src.routes.v1.lookup.schema import LookupParams, PackageLookupResponse
 from src.routes.v1.packages.schema import PackageUpdate
 from src.routes.v1.packages.service import PackageService, get_package_service
+from src.utils.auth import authenticate_user
 from src.utils.embeddings import embed_text
 from src.utils.github_extraction import extract_github_candidates
 from src.utils.github_readme import get_readmes_for_repos
@@ -62,6 +64,7 @@ def get_lookup_params(ecosystem: str, package_name: str) -> LookupParams:
 async def lookup_package(
     params: LookupParams = Depends(get_lookup_params),
     package_service: PackageService = Depends(get_package_service),
+    user: DBUser = Depends(authenticate_user),
 ) -> PackageLookupResponse:
     """Look up the best matching GitHub repository for a package."""
     package = await package_service.retrieve_by_ecosystem_and_name(
