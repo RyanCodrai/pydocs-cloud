@@ -7,7 +7,8 @@ from fastapi import Depends, HTTPException, Request, WebSocket, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from src.db.models import DBAPIKey, DBUser
 from src.routes.v1.apikeys.service import APIKeyService, get_apikey_service
-from src.routes.v1.queries.service import QueryService, get_query_service
+
+# from src.routes.v1.queries.service import QueryService, get_query_service
 from src.routes.v1.users.service import UserNotFound, UserService, get_user_service
 from src.settings import settings
 
@@ -120,27 +121,27 @@ async def authorise_api_key(
     return api_key
 
 
-async def authenticate_query(
-    credentials: HTTPAuthorizationCredentials = Depends(get_token),
-    user_service: UserService = Depends(get_user_service),
-    api_key_service: APIKeyService = Depends(get_apikey_service),
-    query_service: QueryService = Depends(get_query_service),
-) -> tuple[DBUser, DBAPIKey]:
-    # If token is an api key not a jason web token
-    if credentials.credentials.startswith("pydocs"):
-        api_key = await api_key_service.retrieve_by_hash(api_key=credentials.credentials)
-        user = await user_service.retrieve(user_id=api_key.user_id)
-        # Check rate-limits for this api key
-        await query_service.check_api_key_rate_limits(api_key=api_key)
-        await query_service.check_user_rate_limits(user_id=user.id)
-        return user, api_key
-
-    # Authenticate as jason web token
-    jwt_payload = await TokenAuthenticator.authenticate(credentials)
-    email_address = jwt_payload.get("https://pydocs.ai/email")
-    try:
-        user = await user_service.retrieve_by_email(email_address=email_address)
-        await query_service.check_user_rate_limits(user_id=user.id)
-    except UserNotFound:
-        user = await user_service.create(email_address=email_address)
-    return user, None
+# async def authenticate_query(
+#     credentials: HTTPAuthorizationCredentials = Depends(get_token),
+#     user_service: UserService = Depends(get_user_service),
+#     api_key_service: APIKeyService = Depends(get_apikey_service),
+#     query_service: QueryService = Depends(get_query_service),
+# ) -> tuple[DBUser, DBAPIKey]:
+#     # If token is an api key not a jason web token
+#     if credentials.credentials.startswith("pydocs"):
+#         api_key = await api_key_service.retrieve_by_hash(api_key=credentials.credentials)
+#         user = await user_service.retrieve(user_id=api_key.user_id)
+#         # Check rate-limits for this api key
+#         await query_service.check_api_key_rate_limits(api_key=api_key)
+#         await query_service.check_user_rate_limits(user_id=user.id)
+#         return user, api_key
+#
+#     # Authenticate as jason web token
+#     jwt_payload = await TokenAuthenticator.authenticate(credentials)
+#     email_address = jwt_payload.get("https://pydocs.ai/email")
+#     try:
+#         user = await user_service.retrieve_by_email(email_address=email_address)
+#         await query_service.check_user_rate_limits(user_id=user.id)
+#     except UserNotFound:
+#         user = await user_service.create(email_address=email_address)
+#     return user, None
