@@ -426,8 +426,8 @@ async def test_list_api_keys_success(client: AsyncClient, authenticated_user: DB
 
     assert len(data) == 2
 
-    required_fields = {"id", "key_name", "key_prefix", "created_at", "attributes"}
-    forbidden_fields = {"key_hash", "api_key", "is_active", "updated_at", "user_id"}
+    required_fields = {"id", "user_id", "key_name", "key_prefix", "created_at", "attributes"}
+    forbidden_fields = {"key_hash", "api_key", "is_active", "updated_at"}
 
     for key in data:
         assert required_fields.issubset(key.keys())
@@ -630,6 +630,7 @@ def test_apikey_output_valid_data():
 
     data = {
         "id": uuid.uuid4(),
+        "user_id": uuid.uuid4(),
         "key_name": "Test Key",
         "key_prefix": "sdk-...abcd",
         "created_at": datetime.utcnow(),
@@ -650,6 +651,7 @@ def test_apikey_output_no_sensitive_fields():
 
     data = {
         "id": uuid.uuid4(),
+        "user_id": uuid.uuid4(),
         "key_name": "Test Key",
         "key_prefix": "sdk-...abcd",
         "created_at": datetime.utcnow(),
@@ -661,7 +663,7 @@ def test_apikey_output_no_sensitive_fields():
     assert not hasattr(output, "key_hash")
     assert not hasattr(output, "api_key")
     assert not hasattr(output, "is_active")
-    assert not hasattr(output, "user_id")
+    assert output.user_id is not None
 
 
 def test_apikey_output_missing_required_field():
@@ -676,6 +678,7 @@ def test_apikey_output_with_none_attributes():
 
     output = APIKeyOutput(
         id=uuid.uuid4(),
+        user_id=uuid.uuid4(),
         key_name="Test Key",
         key_prefix="sdk-...abcd",
         created_at=datetime.utcnow(),
@@ -690,6 +693,7 @@ def test_apikey_output_first_creation_includes_api_key():
 
     output = APIKeyOutputFirstCreation(
         id=uuid.uuid4(),
+        user_id=uuid.uuid4(),
         key_name="Test Key",
         key_prefix="sdk-...abcd",
         created_at=datetime.utcnow(),
