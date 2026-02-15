@@ -61,6 +61,7 @@ class APIKeyUpdateFull(APIKeyUpdate):
 
 class APIKeyOutput(BaseModel):
     id: UUID
+    user_id: UUID
     key_name: str
     key_prefix: str
     created_at: datetime
