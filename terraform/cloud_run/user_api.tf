@@ -40,7 +40,7 @@ resource "google_project_iam_member" "user_api_cloudsql" {
 resource "google_cloud_run_v2_service" "user_api" {
   name                 = "pydocs-user-api"
   location             = var.region
-  ingress              = "INGRESS_TRAFFIC_ALL"  # Public-facing, sits behind Cloudflare
+  ingress              = "INGRESS_TRAFFIC_ALL"  # Public-facing, sits behind global load balancer
   invoker_iam_disabled = true
 
   template {
