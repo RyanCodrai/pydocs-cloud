@@ -15,12 +15,12 @@ from src.utils.auth import authenticate_user, authorise_user
 router = APIRouter()
 
 
-@router.get("/users", response_model=UserOutput)
+@router.get("/users")
 async def get_user(user: DBUser = Depends(authenticate_user)) -> UserOutput:
     return UserOutput(**user.model_dump())
 
 
-@router.patch("/users/{user_id}", response_model=DBUser)
+@router.patch("/users/{user_id}")
 async def update_user(
     update_user_data: UserInput,
     user_service: UserService = Depends(get_user_service),
