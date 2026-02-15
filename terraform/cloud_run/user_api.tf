@@ -17,7 +17,6 @@ resource "google_secret_manager_secret_iam_member" "user_api_secrets" {
     "postgres-password",
     "postgres-host",
     "postgres-port",
-    "github-token",
     "github-app-client-id",
     "github-app-client-secret",
   ])
@@ -25,6 +24,20 @@ resource "google_secret_manager_secret_iam_member" "user_api_secrets" {
   secret_id = each.value
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.user_api.email}"
+}
+
+# Grant Vertex AI User role for embeddings (lookup)
+resource "google_project_iam_member" "user_api_vertex_ai" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.user_api.email}"
+}
+
+# Grant Storage Object Admin role for GCS bucket access (lookup caching)
+resource "google_storage_bucket_iam_member" "user_api_bucket_access" {
+  bucket = var.data_bucket_name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.user_api.email}"
 }
 
 # Grant Cloud SQL Client role for database access
@@ -140,17 +153,6 @@ resource "google_cloud_run_v2_service" "user_api" {
         value_source {
           secret_key_ref {
             secret  = "postgres-port"
-            version = "latest"
-          }
-        }
-      }
-
-      # External API keys
-      env {
-        name = "GITHUB_TOKEN"
-        value_source {
-          secret_key_ref {
-            secret  = "github-token"
             version = "latest"
           }
         }

@@ -25,9 +25,6 @@ class Settings(BaseSettings):
     GITHUB_APP_CLIENT_ID: Optional[str] = None
     GITHUB_APP_CLIENT_SECRET: Optional[str] = None
 
-    # External API Keys
-    GITHUB_TOKEN: Optional[str] = None
-
     @property
     def DATABASE_URL(self) -> URL:
         return URL.create(

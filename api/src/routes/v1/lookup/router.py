@@ -34,6 +34,7 @@ async def find_github_repos(
     description: str | None,
     project_urls: dict[str, str],
     home_page: str | None,
+    github_token: str,
 ) -> list[tuple[str, float]]:
     """Find and rank GitHub repositories from package metadata."""
     candidates = extract_github_candidates(description=description, project_urls=project_urls, home_page=home_page)
@@ -41,7 +42,7 @@ async def find_github_repos(
     if not candidates:
         return []
 
-    repos_with_readmes = await get_readmes_for_repos(candidates)
+    repos_with_readmes = await get_readmes_for_repos(candidates, github_token)
     description_embedding = await embed_text(description)
 
     scored_repos = []
@@ -78,6 +79,7 @@ async def lookup_package(
         description=package.description,
         project_urls=package.project_urls,
         home_page=package.home_page,
+        github_token=user.github_token,
     )
 
     if not scored_repos:
