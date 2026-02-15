@@ -21,11 +21,9 @@ class Settings(BaseSettings):
     DATABASE_POOL_SIZE: int = 20
     DATABASE_POOL_SIZE_OVERFLOW: int = 5
 
-    # Optional Auth0 Configuration
-    AUTH0_DOMAIN: Optional[str] = None
-    AUTH0_CLIENT_ID: Optional[str] = None
-    AUTH0_ISSUER: Optional[str] = None
-    AUTH0_ALGORITHMS: Optional[str] = None
+    # GitHub OAuth (for install flow)
+    GITHUB_APP_CLIENT_ID: Optional[str] = None
+    GITHUB_APP_CLIENT_SECRET: Optional[str] = None
 
     # External API Keys
     GITHUB_TOKEN: Optional[str] = None

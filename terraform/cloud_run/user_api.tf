@@ -17,11 +17,9 @@ resource "google_secret_manager_secret_iam_member" "user_api_secrets" {
     "postgres-password",
     "postgres-host",
     "postgres-port",
-    "auth0-domain",
-    "auth0-issuer",
-    "auth0-client-id",
-    "auth0-algorithms",
     "github-token",
+    "github-app-client-id",
+    "github-app-client-secret",
   ])
 
   secret_id = each.value
@@ -147,53 +145,33 @@ resource "google_cloud_run_v2_service" "user_api" {
         }
       }
 
-      # Auth0 configuration
-      env {
-        name = "AUTH0_DOMAIN"
-        value_source {
-          secret_key_ref {
-            secret  = "auth0-domain"
-            version = "latest"
-          }
-        }
-      }
-
-      env {
-        name = "AUTH0_ISSUER"
-        value_source {
-          secret_key_ref {
-            secret  = "auth0-issuer"
-            version = "latest"
-          }
-        }
-      }
-
-      env {
-        name = "AUTH0_CLIENT_ID"
-        value_source {
-          secret_key_ref {
-            secret  = "auth0-client-id"
-            version = "latest"
-          }
-        }
-      }
-
-      env {
-        name = "AUTH0_ALGORITHMS"
-        value_source {
-          secret_key_ref {
-            secret  = "auth0-algorithms"
-            version = "latest"
-          }
-        }
-      }
-
       # External API keys
       env {
         name = "GITHUB_TOKEN"
         value_source {
           secret_key_ref {
             secret  = "github-token"
+            version = "latest"
+          }
+        }
+      }
+
+      # GitHub App OAuth
+      env {
+        name = "GITHUB_APP_CLIENT_ID"
+        value_source {
+          secret_key_ref {
+            secret  = "github-app-client-id"
+            version = "latest"
+          }
+        }
+      }
+
+      env {
+        name = "GITHUB_APP_CLIENT_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = "github-app-client-secret"
             version = "latest"
           }
         }
