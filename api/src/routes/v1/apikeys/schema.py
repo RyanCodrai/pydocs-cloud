@@ -33,18 +33,13 @@ class Attributes(BaseModel):
 
 
 class APIKeyInput(BaseModel):
-    """Input schema for creating and updating API keys."""
+    """Internal DTO for API key creation."""
 
-    api_key: str
-    key_name: Optional[str] = None
-    user_id: Optional[UUID] = None
-    is_active: Optional[bool] = None
+    api_key: str = Field(default_factory=lambda: f"pydocs-{secrets.token_urlsafe(32)}")
+    key_name: str
+    user_id: UUID
+    is_active: bool = True
     attributes: Attributes = Attributes()
-
-    def __init__(self, *args, **kwargs):
-        if kwargs.get("api_key") is None:
-            kwargs["api_key"] = f"pydocs-{secrets.token_urlsafe(32)}"
-        super().__init__(*args, **kwargs)
 
     @property
     def key_hash(self) -> str:
