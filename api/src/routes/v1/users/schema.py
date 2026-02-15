@@ -12,7 +12,6 @@ from pydantic import BaseModel
 
 
 class UserInput(BaseModel):
-    # We will update more in future include proxy location, cookies etc
     is_active: Optional[bool] = None
 
 
