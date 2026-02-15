@@ -52,7 +52,7 @@ class DBUser(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     email_address: str = Field(unique=True, index=True)
     github_token: str | None = Field(default=None)
-    is_active: bool = Field(default=False)
+    is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     updated_at: datetime = Field(
         default_factory=datetime.utcnow, index=True, sa_column_kwargs={"onupdate": datetime.utcnow}
