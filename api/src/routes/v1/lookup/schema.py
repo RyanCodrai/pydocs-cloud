@@ -5,6 +5,7 @@ from src.routes.v1.webhooks.schema import normalize_package_name
 class LookupParams(BaseModel):
     ecosystem: str
     package_name: str
+    version: str | None = None
 
     @model_validator(mode="after")
     def normalize_name(self):
@@ -15,3 +16,4 @@ class LookupParams(BaseModel):
 
 class PackageLookupResponse(BaseModel):
     github_url: str
+    commit_sha: str

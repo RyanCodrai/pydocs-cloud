@@ -4,8 +4,10 @@ from src.db.models import DBUser
 from src.routes.v1.lookup.schema import LookupParams, PackageLookupResponse
 from src.routes.v1.packages.schema import PackageUpdate
 from src.routes.v1.packages.service import PackageService, get_package_service
+from src.routes.v1.releases.service import ReleaseService, get_release_service
 from src.utils.auth import authenticate_user
 from src.utils.embeddings import embed_text
+from src.utils.github_commits import get_commit_at_timestamp
 from src.utils.github_extraction import extract_github_candidates
 from src.utils.github_readme import get_readmes_for_repos
 
@@ -55,36 +57,53 @@ async def find_github_repos(
     return scored_repos
 
 
-def get_lookup_params(ecosystem: str, package_name: str) -> LookupParams:
+async def resolve_source_code(params: LookupParams, package_service: PackageService, github_token: str) -> str:
+    """Resolve the GitHub source code URL for a package, discovering it if needed."""
+    package = await package_service.retrieve_by_ecosystem_and_name(
+        ecosystem=params.ecosystem, package_name=params.package_name
+    )
+
+    if package.source_code:
+        return package.source_code
+
+    scored_repos = await find_github_repos(
+        description=package.description,
+        project_urls=package.project_urls,
+        home_page=package.home_page,
+        github_token=github_token,
+    )
+    if not scored_repos:
+        raise SourceCodeNotFoundError(params.package_name)
+
+    source_code = scored_repos[0][0]
+    await package_service.update(package, PackageUpdate(source_code=source_code))
+    return source_code
+
+
+def get_lookup_params(ecosystem: str, package_name: str, version: str | None = None) -> LookupParams:
     if ecosystem not in SUPPORTED_ECOSYSTEMS:
         raise EcosystemNotFoundError(ecosystem)
-    return LookupParams(ecosystem=ecosystem, package_name=package_name)
+    return LookupParams(ecosystem=ecosystem, package_name=package_name, version=version)
 
 
 @router.get("/lookup/{ecosystem}/{package_name:path}", response_model=PackageLookupResponse)
 async def lookup_package(
     params: LookupParams = Depends(get_lookup_params),
     package_service: PackageService = Depends(get_package_service),
+    release_service: ReleaseService = Depends(get_release_service),
     user: DBUser = Depends(authenticate_user),
 ) -> PackageLookupResponse:
     """Look up the best matching GitHub repository for a package."""
-    package = await package_service.retrieve_by_ecosystem_and_name(
-        ecosystem=params.ecosystem, package_name=params.package_name
+    github_url = await resolve_source_code(params, package_service, user.github_token)
+
+    releases = await release_service.retrieve_by_package(
+        ecosystem=params.ecosystem, package_name=params.package_name, version=params.version, limit=1
+    )
+    if not releases:
+        raise HTTPException(status_code=404, detail="No releases found for this package")
+
+    commit_sha = await get_commit_at_timestamp(
+        github_url=github_url, timestamp=releases[0].last_seen, github_token=user.github_token
     )
 
-    if package.source_code:
-        return PackageLookupResponse(github_url=package.source_code)
-
-    scored_repos = await find_github_repos(
-        description=package.description,
-        project_urls=package.project_urls,
-        home_page=package.home_page,
-        github_token=user.github_token,
-    )
-
-    if not scored_repos:
-        raise SourceCodeNotFoundError(params.package_name)
-
-    best_url = scored_repos[0][0]
-    await package_service.update(package, PackageUpdate(source_code=best_url))
-    return PackageLookupResponse(github_url=best_url)
+    return PackageLookupResponse(github_url=github_url, commit_sha=commit_sha)
