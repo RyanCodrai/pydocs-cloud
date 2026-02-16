@@ -1,13 +1,13 @@
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
 from src.db.models import DBUser
+from src.routes.v1.commit_cache.service import CommitCacheService, get_commit_cache_service
 from src.routes.v1.lookup.schema import LookupParams, PackageLookupResponse
 from src.routes.v1.packages.schema import PackageUpdate
 from src.routes.v1.packages.service import PackageService, get_package_service
 from src.routes.v1.releases.service import ReleaseService, get_release_service
 from src.utils.auth import authenticate_user
 from src.utils.embeddings import embed_text
-from src.utils.github_commits import get_commit_at_timestamp
 from src.utils.github_extraction import extract_github_candidates
 from src.utils.github_readme import get_readmes_for_repos
 
@@ -91,6 +91,7 @@ async def lookup_package(
     params: LookupParams = Depends(get_lookup_params),
     package_service: PackageService = Depends(get_package_service),
     release_service: ReleaseService = Depends(get_release_service),
+    commit_cache_service: CommitCacheService = Depends(get_commit_cache_service),
     user: DBUser = Depends(authenticate_user),
 ) -> PackageLookupResponse:
     """Look up the best matching GitHub repository for a package."""
@@ -102,7 +103,7 @@ async def lookup_package(
     if not releases:
         raise HTTPException(status_code=404, detail="No releases found for this package")
 
-    commit_sha = await get_commit_at_timestamp(
+    commit_sha = await commit_cache_service.get_commit_sha(
         github_url=github_url, timestamp=releases[0].last_seen, github_token=user.github_token
     )
 
