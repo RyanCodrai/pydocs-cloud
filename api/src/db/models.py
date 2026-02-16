@@ -45,7 +45,7 @@ class DBCommitCache(SQLModel, table=True):
     github_url: str
     timestamp: datetime
     commit_sha: str
-    __table_args__ = UniqueConstraint("github_url", "timestamp", name="unique_commit_cache")
+    __table_args__ = (UniqueConstraint("github_url", "timestamp", name="unique_commit_cache"),)
 
 
 class DBKvStore(SQLModel, table=True):
