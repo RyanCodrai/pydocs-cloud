@@ -40,3 +40,8 @@ output "artifact_registry_url" {
   description = "URL for the Artifact Registry repository"
   value       = "${google_artifact_registry_repository.docker_images.location}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.docker_images.repository_id}"
 }
+
+output "landing_ip_address" {
+  description = "Static IP address for the landing page load balancer — point your A record here"
+  value       = google_compute_global_address.landing.address
+}
