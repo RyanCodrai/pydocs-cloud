@@ -116,3 +116,29 @@ resource "google_compute_global_forwarding_rule" "landing_https" {
   target                = google_compute_target_https_proxy.landing.id
   ip_address            = google_compute_global_address.landing.id
 }
+
+# --- HTTP → HTTPS redirect ---
+
+resource "google_compute_url_map" "landing_http_redirect" {
+  name = "sourced-landing-http-redirect"
+
+  default_url_redirect {
+    https_redirect         = true
+    strip_query            = false
+    redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
+  }
+}
+
+resource "google_compute_target_http_proxy" "landing" {
+  name    = "sourced-landing-http-proxy"
+  url_map = google_compute_url_map.landing_http_redirect.id
+}
+
+resource "google_compute_global_forwarding_rule" "landing_http" {
+  name                  = "sourced-landing-http-rule"
+  ip_protocol           = "TCP"
+  load_balancing_scheme = "EXTERNAL"
+  port_range            = "80"
+  target                = google_compute_target_http_proxy.landing.id
+  ip_address            = google_compute_global_address.landing.id
+}

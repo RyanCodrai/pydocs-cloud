@@ -171,6 +171,7 @@ module "cloud_run" {
   docker_image                     = data.google_artifact_registry_docker_image.api_image.self_link
   cloud_sql_connection_name        = module.cloud_sql.instance_connection_name
   data_bucket_name                 = module.storage.bucket_name
+  landing_docker_image             = "${local.region}-docker.pkg.dev/${local.project_id}/pydocs-images/sourced-landing:latest"
 
   depends_on = [
     google_project_service.required_apis["run.googleapis.com"],
