@@ -58,9 +58,8 @@ resource "google_cloud_run_v2_service" "user_api" {
     service_account = google_service_account.user_api.email
     timeout         = "300s"
 
-    # Scale from 0 to 10 instances (user traffic is lighter)
     scaling {
-      min_instance_count = 0
+      min_instance_count = 1
       max_instance_count = 10
     }
 
