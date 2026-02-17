@@ -37,6 +37,9 @@ dependencies = [
     "scikit-learn",
     "pandas",
 
+    # MCP Server
+    "mcp",
+
     # Utilities
     "tenacity",
     "pytest-asyncio",
