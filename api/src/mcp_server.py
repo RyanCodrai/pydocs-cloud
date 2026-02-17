@@ -1,5 +1,7 @@
-import fnmatch
+import glob as glob_module
+import io
 import re
+import tarfile
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -53,7 +55,7 @@ transport_security = TransportSecuritySettings(
     enable_dns_rebinding_protection=True, allowed_hosts=allowed_hosts, allowed_origins=[]
 )
 mcp = FastMCP(
-    "sourced",
+    "sourced.dev",
     stateless_http=True,
     token_verifier=SourcedTokenVerifier(),
     auth=auth_settings,
@@ -189,10 +191,17 @@ async def glob(
         path = path.strip("/")
         files = [f for f in files if f.startswith(path + "/") or f == path]
 
-    matches = [f for f in files if fnmatch.fnmatch(f, pattern)]
+    regex = re.compile(glob_module.translate(pattern, recursive=True, include_hidden=True))
+    matches = [f for f in files if regex.match(f)]
     if not matches:
         return "No files matched the pattern."
-    return "\n".join(matches)
+
+    total = len(matches)
+    MAX_RESULTS = 100
+    output = "\n".join(matches[:MAX_RESULTS])
+    if total > MAX_RESULTS:
+        output += f"\n\n... and {total - MAX_RESULTS} more files ({total} total). Use the `path` parameter to narrow your search."
+    return output
 
 
 @mcp.tool()
@@ -201,8 +210,13 @@ async def grep(
     package_name: str,
     pattern: str,
     path: str | None = None,
-    glob_pattern: str | None = None,
+    glob: str | None = None,
     version: str | None = None,
+    output_mode: str = "files_with_matches",
+    head_limit: int = 0,
+    offset: int = 0,
+    case_insensitive: bool = False,
+    multiline: bool = False,
 ) -> str:
     """Search for a regex pattern in a package's source code.
 
@@ -211,44 +225,105 @@ async def grep(
         package_name: Name of the package
         pattern: Regex pattern to search for (e.g. "def get", "class.*Error")
         path: Optional directory to scope the search to
-        glob_pattern: Optional glob to filter files (e.g. "*.py", "*.ts")
+        glob: Optional glob to filter files (e.g. "*.py", "*.ts")
         version: Optional package version (defaults to latest)
+        output_mode: Output mode: "files_with_matches" (default, file paths only), "content" (file:line_num:line), "count" (file:count)
+        head_limit: Limit output to first N entries after offset (0 = unlimited)
+        offset: Skip first N entries before applying head_limit
+        case_insensitive: Case insensitive search (default: false)
+        multiline: Enable multiline mode where . matches newlines and patterns can span lines (default: false)
     """
+    if output_mode not in ("files_with_matches", "content", "count"):
+        return "Error: output_mode must be one of: files_with_matches, content, count"
+
     try:
         tarball_bytes, _ = await resolve_package(ecosystem, package_name, version)
     except (HTTPException, ValueError) as e:
         return f"Error: {e}"
 
-    files = get_file_tree(tarball_bytes)
-
-    if path:
-        path = path.strip("/")
-        files = [f for f in files if f.startswith(path + "/") or f == path]
-
-    if glob_pattern:
-        files = [f for f in files if fnmatch.fnmatch(f, glob_pattern)]
-
-    # Cap file count to avoid excessive processing
-    files = files[:50]
+    flags = 0
+    if case_insensitive:
+        flags |= re.IGNORECASE
+    if multiline:
+        flags |= re.DOTALL | re.MULTILINE
 
     try:
-        regex = re.compile(pattern)
+        regex = re.compile(pattern, flags)
     except re.error as e:
         return f"Error: Invalid regex pattern: {e}"
 
-    results = []
-    for file_path in files:
-        try:
-            content = get_file_content(tarball_bytes, file_path)
-        except (FileNotFoundError, UnicodeDecodeError):
-            continue
-        for line_num, line in enumerate(content.splitlines(), start=1):
-            if regex.search(line):
-                results.append(f"{file_path}:{line_num}:{line}")
+    if path:
+        path = path.strip("/")
 
-    if not results:
+    glob_regex = None
+    if glob:
+        glob_regex = re.compile(glob_module.translate(glob, recursive=True, include_hidden=True))
+
+    # Collect raw matches per file
+    matched_files: dict[str, list[tuple[int, str]]] = {}
+    with tarfile.open(fileobj=io.BytesIO(tarball_bytes), mode="r:gz") as tar:
+        for member in tar.getmembers():
+            if not member.isfile():
+                continue
+            parts = member.name.split("/", 1)
+            if len(parts) != 2:
+                continue
+            file_path = parts[1]
+
+            if path and not (file_path.startswith(path + "/") or file_path == path):
+                continue
+            if glob_regex and not glob_regex.match(file_path):
+                continue
+
+            try:
+                f = tar.extractfile(member)
+                if f is None:
+                    continue
+                content = f.read().decode("utf-8", errors="replace")
+            except (UnicodeDecodeError, OSError):
+                continue
+
+            if multiline:
+                content_lines = content.splitlines()
+                for match in regex.finditer(content):
+                    line_num = content[: match.start()].count("\n") + 1
+                    if file_path not in matched_files:
+                        matched_files[file_path] = []
+                    matched_files[file_path].append((line_num, content_lines[line_num - 1]))
+            else:
+                for line_num, line in enumerate(content.splitlines(), start=1):
+                    if regex.search(line):
+                        if file_path not in matched_files:
+                            matched_files[file_path] = []
+                        matched_files[file_path].append((line_num, line))
+
+    if not matched_files:
         return "No matches found."
-    return "\n".join(results)
+
+    # Build entries based on output_mode
+    entries: list[str] = []
+    if output_mode == "files_with_matches":
+        entries = list(matched_files.keys())
+    elif output_mode == "content":
+        for fp, matches in matched_files.items():
+            for line_num, line in matches:
+                entries.append(f"{fp}:{line_num}:{line}")
+    elif output_mode == "count":
+        for fp, matches in matched_files.items():
+            entries.append(f"{fp}:{len(matches)}")
+
+    # Apply offset → head_limit
+    if offset > 0:
+        entries = entries[offset:]
+    if head_limit > 0:
+        entries = entries[:head_limit]
+
+    # Join and truncate at 30,000 chars
+    MAX_OUTPUT_CHARS = 30_000
+    output = "\n".join(entries)
+    if len(output) > MAX_OUTPUT_CHARS:
+        output = output[:MAX_OUTPUT_CHARS] + "\n\n... output truncated at 30,000 characters."
+    return output
 
 
 @mcp.tool()
@@ -280,16 +355,52 @@ async def read(
     except FileNotFoundError as e:
         return f"Error: {e}"
 
+    # Size guard: if using default offset/limit, check raw file size (256KB limit)
+    MAX_FILE_SIZE = 256 * 1024
+    content_bytes = len(content.encode("utf-8"))
+    is_default = offset == 1 and limit == 2000
+    if is_default and content_bytes > MAX_FILE_SIZE:
+        if content_bytes >= 1024 * 1024:
+            size_str = f"{content_bytes / (1024 * 1024):.1f}MB"
+        else:
+            size_str = f"{content_bytes / 1024:.0f}KB"
+        return (
+            f"File content ({size_str}) exceeds maximum allowed size (256KB). "
+            "Please use offset and limit parameters to read specific portions of the file, "
+            "or use the grep tool to search for specific content."
+        )
+
     lines = content.splitlines()
+
+    # Truncate each line at 2,000 characters
+    lines = [line[:2000] for line in lines]
+
     # Apply offset and limit (offset is 1-indexed)
     start = max(0, offset - 1)
     selected = lines[start : start + limit]
 
     # Format with line numbers (cat -n style)
+    total_lines = len(lines)
+    num_lines = len(selected)
     numbered = []
     for i, line in enumerate(selected, start=offset):
         numbered.append(f"     {i}\t{line}")
-    return "\n".join(numbered)
+    output = "\n".join(numbered)
+
+    # Append metadata so the caller knows the file size and what slice was returned
+    output += f"\n\n[Lines {offset}-{offset + num_lines - 1} of {total_lines} total]"
+
+    # Token guard: estimate tokens (~4 chars per token) and reject if too large
+    MAX_TOKENS = 25_000
+    estimated_tokens = len(output) // 4
+    if estimated_tokens > MAX_TOKENS:
+        return (
+            f"File content ({estimated_tokens} tokens) exceeds maximum allowed tokens ({MAX_TOKENS}). "
+            "Please use offset and limit parameters to read specific portions of the file, "
+            "or use the grep tool to search for specific content."
+        )
+
+    return output
 
 
 def create_mcp_app():

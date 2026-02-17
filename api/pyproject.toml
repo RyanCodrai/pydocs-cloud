@@ -40,6 +40,9 @@ dependencies = [
     # MCP Server
     "mcp",
 
+    # Git protocol
+    "dulwich",
+
     # Utilities
     "tenacity",
     "pytest-asyncio",
