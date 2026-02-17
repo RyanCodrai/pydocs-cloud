@@ -38,6 +38,12 @@ variable "user_api_domain" {
   default     = "api.sourced.dev"
 }
 
+variable "mcp_api_domain" {
+  description = "Custom domain for the MCP API (e.g., mcp.sourced.dev)"
+  type        = string
+  default     = "mcp.sourced.dev"
+}
+
 variable "landing_domain" {
   description = "Custom domain for the landing page (e.g., sourced.dev)"
   type        = string
