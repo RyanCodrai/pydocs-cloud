@@ -18,7 +18,7 @@ export default function Home() {
   return (
     <div className="bg-gradient-to-br from-stone-50 via-amber-50/30 to-orange-50/20">
       {/* Hero — fills exactly one viewport */}
-      <section className="h-screen flex flex-col px-6">
+      <section className="h-dvh flex flex-col px-6">
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className="flex flex-col items-center gap-6 max-w-2xl text-center">
             <Image
@@ -34,7 +34,7 @@ export default function Home() {
             </h1>
 
             <p className="text-stone-500 text-base sm:text-lg leading-relaxed">
-              Give your coding agent access to dependency source code
+              Give your coding agent access to dependency source code — free and open source
             </p>
 
             {/* Install section */}
