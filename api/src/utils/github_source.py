@@ -42,12 +42,13 @@ def get_file_tree(tarball_bytes: bytes) -> list[str]:
 def get_file_content(tarball_bytes: bytes, file_path: str) -> str:
     """Extract a single file's content from a tarball."""
     with _open_tarball(tarball_bytes) as tar:
-        for member in tar.getmembers():
-            if member.isfile():
-                parts = member.name.split("/", 1)
-                if len(parts) == 2 and parts[1] == file_path:
-                    f = tar.extractfile(member)
-                    if f is None:
-                        raise FileNotFoundError(f"Could not read file: {file_path}")
-                    return f.read().decode("utf-8", errors="replace")
+        while (member := tar.next()) is not None:
+            if not member.isfile():
+                continue
+            parts = member.name.split("/", 1)
+            if len(parts) == 2 and parts[1] == file_path:
+                f = tar.extractfile(member)
+                if f is None:
+                    raise FileNotFoundError(f"Could not read file: {file_path}")
+                return f.read().decode("utf-8", errors="replace")
     raise FileNotFoundError(f"File not found: {file_path}")
