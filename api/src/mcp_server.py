@@ -5,8 +5,10 @@ from fastapi import HTTPException
 from mcp.server.auth.provider import AccessToken, TokenVerifier
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from src.db.operations import managed_session
 from src.routes.v1.apikeys.service import APIKeyService
+from src.settings import settings
 from src.utils.app_lifespan import database
 from src.utils.logger import logger
 from starlette.requests import Request
@@ -31,8 +33,17 @@ async def lifespan(app: FastMCP) -> AsyncIterator[None]:
 
 
 auth_settings = AuthSettings(issuer_url="https://api.sourced.dev", resource_server_url="https://mcp.sourced.dev")
+allowed_hosts = ["localhost:*", "127.0.0.1:*"] if settings.ENVIRONMENT == "LOCAL" else ["mcp.sourced.dev"]
+transport_security = TransportSecuritySettings(
+    enable_dns_rebinding_protection=True, allowed_hosts=allowed_hosts, allowed_origins=[]
+)
 mcp = FastMCP(
-    "sourced", stateless_http=True, token_verifier=SourcedTokenVerifier(), auth=auth_settings, lifespan=lifespan
+    "sourced",
+    stateless_http=True,
+    token_verifier=SourcedTokenVerifier(),
+    auth=auth_settings,
+    lifespan=lifespan,
+    transport_security=transport_security,
 )
 
 
