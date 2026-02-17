@@ -1,5 +1,6 @@
 import fnmatch
 import re
+import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -134,7 +135,7 @@ async def resolve_package(ecosystem: str, package_name: str, version: str | None
     if not access_token:
         raise ValueError("Authentication required")
 
-    user_id = access_token.client_id
+    user_id = uuid.UUID(access_token.client_id)
 
     async with managed_session() as session:
         user = await UserService(db_session=session).retrieve(user_id=user_id)
