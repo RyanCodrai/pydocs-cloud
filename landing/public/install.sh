@@ -6,7 +6,7 @@ set -e
 
 GITHUB_CLIENT_ID="Ov23licLaZ5SAKAW8vZO"
 API_BASE="${API_BASE:-https://api.sourced.dev}"
-MCP_URL="${MCP_URL:-http://localhost:8081/mcp}"
+MCP_URL="${MCP_URL:-https://mcp.sourced.dev/mcp}"
 PORT=8123
 REDIRECT_URI="http://localhost:${PORT}/callback"
 
@@ -117,7 +117,7 @@ fi
 
 printf "\n"
 printf "${BOLD}sourced.dev${RESET}\n"
-printf "${DIM}Give your coding agent access to dependency source code.${RESET}\n"
+printf "${DIM}Give your coding agent access to dependency source code${RESET}\n"
 printf "\n"
 printf "${BOLD}Install sourced.dev MCP...${RESET}\n"
 
@@ -790,5 +790,5 @@ fi
 
 printf "\n"
 printf "${BOLD_GREEN}Setup complete!${RESET}\n"
-printf "Restart your coding agents to start using sourced.\n"
+printf "Restart your coding agents to start using sourced.dev\n"
 printf "\n"
