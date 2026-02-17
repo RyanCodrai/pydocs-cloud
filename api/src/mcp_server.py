@@ -16,6 +16,8 @@ from mcp.server.transport_security import TransportSecuritySettings
 from src.db.operations import managed_session
 from src.routes.v1.apikeys.service import APIKeyService
 from src.routes.v1.commit_cache.service import CommitCacheService
+from src.routes.v1.feedback.schema import FeedbackType
+from src.routes.v1.feedback.service import FeedbackService
 from src.routes.v1.packages.schema import PackageUpdate
 from src.routes.v1.packages.service import PackageService
 from src.routes.v1.releases.service import ReleaseService
@@ -401,6 +403,27 @@ async def read(
         )
 
     return output
+
+
+@mcp.tool()
+async def submit_feedback(feedback_type: FeedbackType, text: str) -> str:
+    """Submit feedback about sourced.dev.
+
+    Args:
+        feedback_type: Type of feedback ("bug", "improvement", "question", "other")
+        text: The feedback content
+    """
+    access_token = get_access_token()
+    if not access_token:
+        return "Error: Authentication required"
+
+    user_id = uuid.UUID(access_token.client_id)
+
+    async with managed_session() as session:
+        feedback_service = FeedbackService(db_session=session)
+        await feedback_service.create(user_id=user_id, feedback_type=feedback_type, text=text)
+
+    return "Feedback submitted successfully. Thank you!"
 
 
 def create_mcp_app():

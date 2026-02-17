@@ -83,6 +83,16 @@ class DBAPIKey(SQLModel, table=True):
     __table_args__ = (Index("ix_api_keys_key_hash_is_active", "key_hash", "is_active"),)
 
 
+class DBFeedback(SQLModel, table=True):
+    __tablename__ = "feedback"
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id", index=True)
+    feedback_type: str
+    text: str
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"onupdate": datetime.utcnow})
+
+
 # class DBQueryHistory(SQLModel, table=True):
 #     __tablename__ = "queries"
 #     id: UUID = Field(default_factory=uuid4, primary_key=True)
