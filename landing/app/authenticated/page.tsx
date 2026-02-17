@@ -8,16 +8,16 @@ export default function Authenticated() {
           <Image
             src="/logo.png"
             alt="sourced.dev"
-            width={100}
-            height={100}
+            width={140}
+            height={140}
             priority
           />
 
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-stone-800">
+          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-stone-800 whitespace-nowrap">
             You have successfully authenticated
           </h1>
 
-          <p className="text-stone-400 text-sm">
+          <p className="text-stone-500 text-base sm:text-lg leading-relaxed">
             You can now close this tab and return to your terminal
           </p>
         </div>
