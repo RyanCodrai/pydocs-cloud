@@ -25,10 +25,6 @@ dependencies = [
     "gcloud-aio-storage",
     "google-auth",
 
-    # Security & Authentication
-    "pyjwt",
-    "cryptography",
-
     # HTTP Client
     "aiohttp",
 
@@ -45,7 +41,6 @@ dependencies = [
 
     # Utilities
     "tenacity",
-    "pytest-asyncio",
 ]
 
 [build-system]
