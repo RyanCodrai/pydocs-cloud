@@ -63,3 +63,29 @@ resource "google_compute_global_forwarding_rule" "user_api_https" {
   target                = google_compute_target_https_proxy.user_api.id
   ip_address            = google_compute_global_address.user_api.id
 }
+
+# --- HTTP → HTTPS redirect ---
+
+resource "google_compute_url_map" "user_api_http_redirect" {
+  name = "pydocs-user-api-http-redirect"
+
+  default_url_redirect {
+    https_redirect         = true
+    strip_query            = false
+    redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
+  }
+}
+
+resource "google_compute_target_http_proxy" "user_api" {
+  name    = "pydocs-user-api-http-proxy"
+  url_map = google_compute_url_map.user_api_http_redirect.id
+}
+
+resource "google_compute_global_forwarding_rule" "user_api_http" {
+  name                  = "pydocs-user-api-http-rule"
+  ip_protocol           = "TCP"
+  load_balancing_scheme = "EXTERNAL"
+  port_range            = "80"
+  target                = google_compute_target_http_proxy.user_api.id
+  ip_address            = google_compute_global_address.user_api.id
+}

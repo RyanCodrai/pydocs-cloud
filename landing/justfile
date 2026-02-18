@@ -1,0 +1,34 @@
+# sourced.dev Landing Page - Development Commands
+# Install just: https://github.com/casey/just
+# Run `just` or `just --list` to see all commands
+
+project  := "pydocs-prod"
+region   := "europe-west2"
+repo     := region + "-docker.pkg.dev/" + project + "/pydocs-images"
+image    := "sourced-landing"
+tag      := "latest"
+
+# Default recipe shows help
+default:
+    @just --list
+
+# Start dev server
+dev:
+    npm run dev
+
+# Build Docker image for production
+build:
+    docker build --platform linux/amd64 -t {{image}}:local .
+
+# Push image to Artifact Registry
+push:
+    docker tag {{image}}:local {{repo}}/{{image}}:{{tag}}
+    docker push {{repo}}/{{image}}:{{tag}}
+
+# Deploy to Cloud Run via Terraform
+deploy:
+    @echo "🚀 Deploying to Cloud Run via Terraform..."
+    cd ../terraform && terraform apply
+
+# Build, push, and deploy in one step
+release: build push deploy

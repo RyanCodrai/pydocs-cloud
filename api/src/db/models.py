@@ -39,6 +39,15 @@ class DBPackage(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("ecosystem", "package_name", name="unique_package"),)
 
 
+class DBCommitCache(SQLModel, table=True):
+    __tablename__ = "commit_cache"
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    github_url: str
+    timestamp: datetime
+    commit_sha: str
+    __table_args__ = (UniqueConstraint("github_url", "timestamp", name="unique_commit_cache"),)
+
+
 class DBKvStore(SQLModel, table=True):
     __tablename__ = "kv_store"
 
@@ -72,6 +81,16 @@ class DBAPIKey(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"onupdate": datetime.utcnow})
 
     __table_args__ = (Index("ix_api_keys_key_hash_is_active", "key_hash", "is_active"),)
+
+
+class DBFeedback(SQLModel, table=True):
+    __tablename__ = "feedback"
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id", index=True)
+    feedback_type: str
+    text: str
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"onupdate": datetime.utcnow})
 
 
 # class DBQueryHistory(SQLModel, table=True):

@@ -74,3 +74,8 @@ service-account-key.json
 
 # Embeddings
 qwen-0.6b-int8/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
