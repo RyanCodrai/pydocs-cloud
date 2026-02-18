@@ -245,112 +245,44 @@ update_steps done done active
 
 OS=$(uname -s)
 
-# Helper: check if a binary exists in PATH or common locations
-find_binary() {
-  command -v "$1" > /dev/null 2>&1 && return 0
-  for _p in "$HOME/.bun/bin/$1" "/usr/local/bin/$1" "/opt/homebrew/bin/$1" "$HOME/.local/bin/$1" "$HOME/.claude/local/$1"; do
-    [ -x "$_p" ] && return 0
-  done
-  return 1
-}
+# --- All supported agents ---
 
-# --- Detect installed agents ---
+ALL_AGENTS="claude_code cursor vscode windsurf codex gemini_cli kiro zed opencode copilot_cli antigravity"
+# Claude Desktop is macOS-only
+if [ "$OS" = "Darwin" ]; then
+  ALL_AGENTS="claude_code claude_desktop cursor vscode windsurf codex gemini_cli kiro zed opencode copilot_cli antigravity"
+fi
 
 DETECTED=""
-DETECTED_NAMES=""
 DETECTED_COUNT=0
-
-add_detected() {
+for _id in $ALL_AGENTS; do
   if [ -z "$DETECTED" ]; then
-    DETECTED="$1"
+    DETECTED="$_id"
   else
-    DETECTED="$DETECTED $1"
+    DETECTED="$DETECTED $_id"
   fi
   DETECTED_COUNT=$((DETECTED_COUNT + 1))
-  if [ -z "$DETECTED_NAMES" ]; then
-    DETECTED_NAMES="$2"
-  else
-    DETECTED_NAMES="$DETECTED_NAMES, $2"
-  fi
-}
+done
 
-# 1. Claude Code (CLI)
-if find_binary "claude"; then
-  add_detected "claude_code" "Claude Code"
-fi
-
-# 2. Claude Desktop (macOS only)
-if [ "$OS" = "Darwin" ] && [ -d "$HOME/Library/Application Support/Claude" ]; then
-  add_detected "claude_desktop" "Claude Desktop"
-fi
-
-# 3. Cursor
+# Resolve config directories for agents that need them
 _cursor_dir="$HOME/.cursor"
 if [ ! -d "$_cursor_dir" ] && [ -d "$HOME/.config/cursor" ]; then _cursor_dir="$HOME/.config/cursor"; fi
-if [ -d "$_cursor_dir" ]; then
-  add_detected "cursor" "Cursor"
-fi
-
-# 4. VS Code
 if [ "$OS" = "Darwin" ]; then _vscode_dir="$HOME/Library/Application Support/Code/User"; else _vscode_dir="$HOME/.config/Code/User"; fi
-if [ -d "$_vscode_dir" ]; then
-  add_detected "vscode" "VS Code"
-fi
-
-# 5. Windsurf
 _windsurf_dir="$HOME/.codeium/windsurf"
 if [ ! -d "$_windsurf_dir" ] && [ -d "$HOME/.config/windsurf" ]; then _windsurf_dir="$HOME/.config/windsurf"; fi
-if [ -d "$_windsurf_dir" ]; then
-  add_detected "windsurf" "Windsurf"
-fi
-
-# 6. Codex (CLI or desktop app — both share ~/.codex/config.toml)
-if find_binary "codex" || [ -d "$HOME/.codex" ] || [ -d "/Applications/Codex.app" ]; then
-  add_detected "codex" "Codex"
-fi
-
-# 7. Gemini CLI (check for settings.json, not just ~/.gemini which Antigravity also uses)
-if [ -f "$HOME/.gemini/settings.json" ] || find_binary "gemini"; then
-  add_detected "gemini_cli" "Gemini CLI"
-fi
-
-# 8. Kiro CLI (formerly Amazon Q)
-if [ -d "$HOME/.kiro" ]; then
-  add_detected "kiro" "Kiro CLI"
-fi
-
-# 9. Zed
-if [ -d "$HOME/.config/zed" ]; then
-  add_detected "zed" "Zed"
-fi
-
-# 10. OpenCode
-if [ -d "$HOME/.config/opencode" ] || [ -d "$HOME/.opencode" ]; then
-  add_detected "opencode" "OpenCode"
-fi
-
-# 11. Copilot CLI
-if [ -d "$HOME/.copilot" ]; then
-  add_detected "copilot_cli" "Copilot CLI"
-fi
-
-# 12. Antigravity (Gemini)
-if [ -d "$HOME/.gemini/antigravity" ]; then
-  add_detected "antigravity" "Antigravity"
-fi
 
 # --- Interactive agent selector ---
 
-if [ "$DETECTED_COUNT" -gt 0 ]; then
-  STEP3="Configure MCP (found: $DETECTED_COUNT agents)"
-  update_steps done done active
+STEP3="Select agents"
+update_steps done done active
 
+{
   # Store agents in numbered variables for indexing
   _sel_n=0
   for _id in $DETECTED; do
     _sel_n=$((_sel_n + 1))
     eval "_sel_id_${_sel_n}=\$_id"
-    eval "_sel_on_${_sel_n}=1"
+    eval "_sel_on_${_sel_n}=0"
     eval "_sel_label_${_sel_n}=\"\$(agent_label \$_id)\""
   done
   _sel_cur=1
@@ -512,7 +444,7 @@ if [ "$DETECTED_COUNT" -gt 0 ]; then
 
   STEP3="Configure MCP ($DETECTED_COUNT agents)"
   update_steps done done active
-fi
+}
 
 # --- Configuration helpers ---
 
@@ -726,19 +658,6 @@ try_configure() {
 # --- Configure each detected agent ---
 
 configured=0
-
-if [ "$DETECTED_COUNT" -eq 0 ]; then
-  # No agents found — configure Claude Desktop as a sensible default
-  if [ "$OS" = "Darwin" ]; then
-    _fallback="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
-  else
-    _fallback="$HOME/.claude/claude_desktop_config.json"
-  fi
-  if configure_json_agent "$_fallback" "mcpServers" "claude_desktop"; then
-    configured=1
-    STEP3="Configure MCP (Claude Desktop)"
-  fi
-fi
 
 for agent in $DETECTED; do
   case $agent in
