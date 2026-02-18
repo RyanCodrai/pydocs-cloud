@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # Application Configuration
     LOGGING_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
     ENVIRONMENT: Literal["LOCAL", "PROD", "TEST", "EVAL"]
-    SERVICE_TYPE: Literal["user", "releases", "npm_sync", "all"] = "all"
+    SERVICE_TYPE: Literal["user", "releases", "npm_sync", "mcp", "all"] = "all"
 
     # Database Configuration
     POSTGRES_DB: str
@@ -23,6 +23,10 @@ class Settings(BaseSettings):
 
     # External API Keys
     GITHUB_TOKEN: Optional[str] = None
+
+    # GitHub OAuth (for install flow)
+    GITHUB_APP_CLIENT_ID: Optional[str] = None
+    GITHUB_APP_CLIENT_SECRET: Optional[str] = None
 
     @property
     def DATABASE_URL(self) -> URL:

@@ -2,7 +2,7 @@
 name = "pydocs-cloud-backend"
 version = "0.1.0"
 description = "PyDocs Cloud Backend API - FastAPI service for package search and management"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
     # Web Framework
     "fastapi",
@@ -11,6 +11,7 @@ dependencies = [
 
     # Database
     "sqlmodel",
+    "sqlalchemy[asyncio]",
     "asyncpg",
 
     # Configuration
@@ -31,6 +32,12 @@ dependencies = [
     "numpy",
     "scikit-learn",
     "pandas",
+
+    # MCP Server
+    "mcp",
+
+    # Git protocol
+    "dulwich",
 
     # Utilities
     "tenacity",

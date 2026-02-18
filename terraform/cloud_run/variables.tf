@@ -8,7 +8,7 @@ variable "project_id" {
 variable "region" {
   description = "GCP region for Cloud Run services"
   type        = string
-  default     = "us-central1"
+  default     = "europe-west2"
 }
 
 variable "environment" {
@@ -29,6 +29,29 @@ variable "cloud_sql_connection_name" {
 
 variable "data_bucket_name" {
   description = "GCS bucket name for data storage"
+  type        = string
+}
+
+variable "user_api_domain" {
+  description = "Custom domain for the user API (e.g., api.sourced.dev)"
+  type        = string
+  default     = "api.sourced.dev"
+}
+
+variable "mcp_api_domain" {
+  description = "Custom domain for the MCP API (e.g., mcp.sourced.dev)"
+  type        = string
+  default     = "mcp.sourced.dev"
+}
+
+variable "landing_domain" {
+  description = "Custom domain for the landing page (e.g., sourced.dev)"
+  type        = string
+  default     = "sourced.dev"
+}
+
+variable "landing_docker_image" {
+  description = "Docker image URL for the landing page"
   type        = string
 }
 

@@ -25,15 +25,14 @@ class ReleaseRepository:
         result = await self.db_session.exec(stmt)
         return result.scalar_one()
 
-    async def retrieve_by_package(self, ecosystem: str, package_name: str, limit: int | None = None) -> list[DBRelease]:
-        stmt = (
-            select(DBRelease)
-            .where(
-                DBRelease.ecosystem == ecosystem,
-                DBRelease.package_name == package_name,
-            )
-            .order_by(DBRelease.first_seen.desc())
-        )
+    async def retrieve_by_package(
+        self, ecosystem: str, package_name: str, version: str | None = None, limit: int | None = None
+    ) -> list[DBRelease]:
+        stmt = select(DBRelease)
+        stmt = stmt.where(DBRelease.ecosystem == ecosystem, DBRelease.package_name == package_name)
+        if version is not None:
+            stmt = stmt.where(DBRelease.version == version)
+        stmt = stmt.order_by(DBRelease.first_seen.desc())
         if limit is not None:
             stmt = stmt.limit(limit)
         result = await self.db_session.exec(stmt)

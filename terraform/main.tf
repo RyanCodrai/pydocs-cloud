@@ -143,6 +143,10 @@ module "secrets" {
   # External API keys
   github_token = var.github_token
 
+  # GitHub App OAuth
+  github_app_client_id     = var.github_app_client_id
+  github_app_client_secret = var.github_app_client_secret
+
   depends_on = [
     google_project_service.required_apis["secretmanager.googleapis.com"],
     module.cloud_sql
@@ -156,6 +160,12 @@ data "google_artifact_registry_docker_image" "api_image" {
   image_name    = "pydocs-api:latest"
 }
 
+data "google_artifact_registry_docker_image" "landing_image" {
+  location      = local.region
+  repository_id = "pydocs-images"
+  image_name    = "sourced-landing:latest"
+}
+
 
 # Cloud Run Module - API services
 module "cloud_run" {
@@ -167,6 +177,7 @@ module "cloud_run" {
   docker_image                     = data.google_artifact_registry_docker_image.api_image.self_link
   cloud_sql_connection_name        = module.cloud_sql.instance_connection_name
   data_bucket_name                 = module.storage.bucket_name
+  landing_docker_image             = data.google_artifact_registry_docker_image.landing_image.self_link
 
   depends_on = [
     google_project_service.required_apis["run.googleapis.com"],

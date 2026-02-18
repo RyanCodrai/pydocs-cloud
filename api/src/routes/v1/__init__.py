@@ -10,6 +10,15 @@ def create_router() -> APIRouter:
 
         router.include_router(webhooks_router)
 
+    if settings.SERVICE_TYPE in {"all", "user"}:
+        from src.routes.v1.apikeys.router import router as apikeys_router
+        from src.routes.v1.auth.router import router as auth_router
+        from src.routes.v1.users.router import router as users_router
+
+        router.include_router(users_router)
+        router.include_router(apikeys_router)
+        router.include_router(auth_router)
+
     return router
 
 

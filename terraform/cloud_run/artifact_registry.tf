@@ -34,6 +34,14 @@ resource "google_project_iam_member" "cloudbuild_service_account" {
   member  = "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
 }
 
+# Grant Compute service account permission to push images (Cloud Build default SA change)
+resource "google_artifact_registry_repository_iam_member" "compute_writer" {
+  repository = google_artifact_registry_repository.docker_images.name
+  location   = google_artifact_registry_repository.docker_images.location
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
 # Grant Compute service account storage access (for running builds from GCE instances)
 resource "google_project_iam_member" "compute_storage_admin" {
   project = var.project_id
@@ -54,5 +62,12 @@ resource "google_artifact_registry_repository_iam_member" "releases_api_reader" 
   location   = google_artifact_registry_repository.docker_images.location
   role       = "roles/artifactregistry.reader"
   member     = "serviceAccount:${google_service_account.releases_api.email}"
+}
+
+resource "google_artifact_registry_repository_iam_member" "user_api_reader" {
+  repository = google_artifact_registry_repository.docker_images.name
+  location   = google_artifact_registry_repository.docker_images.location
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${google_service_account.user_api.email}"
 }
 

@@ -48,8 +48,12 @@ class ReleaseService:
         except NoResultFound as exc:
             raise ReleaseNotFound from exc
 
-    async def retrieve_by_package(self, ecosystem: str, package_name: str, limit: int | None = None) -> list[DBRelease]:
-        return await self.repository.retrieve_by_package(ecosystem=ecosystem, package_name=package_name, limit=limit)
+    async def retrieve_by_package(
+        self, ecosystem: str, package_name: str, version: str | None = None, limit: int | None = None
+    ) -> list[DBRelease]:
+        return await self.repository.retrieve_by_package(
+            ecosystem=ecosystem, package_name=package_name, version=version, limit=limit
+        )
 
     async def retrieve_latest_timestamp(self, ecosystem: str, package_name: str) -> datetime:
         return await self.repository.retrieve_latest_timestamp(ecosystem=ecosystem, package_name=package_name)
