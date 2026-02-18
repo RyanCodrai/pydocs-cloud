@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import Depends, HTTPException, Request, WebSocket, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from src.db.models import DBAPIKey, DBUser
 from src.routes.v1.apikeys.service import APIKeyService, get_apikey_service
@@ -25,16 +25,18 @@ class UnauthenticatedException(HTTPException):
         )
 
 
+def _extract_bearer_token(header_value: str) -> str:
+    scheme, _, token = header_value.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise UnauthenticatedException(detail="Invalid authorization scheme")
+    return token
+
+
 async def get_token(
     request: Request = None,
-    websocket: WebSocket = None,
 ) -> HTTPAuthorizationCredentials:
     if request and "Authorization" in request.headers:
-        token = request.headers.get("Authorization")[7:]
-    elif websocket and "Authorization" in websocket.headers:
-        token = websocket.headers.get("Authorization")[7:]
-    elif websocket and "Authorization" in websocket.query_params:
-        token = websocket.query_params.get("Authorization")
+        token = _extract_bearer_token(request.headers.get("Authorization"))
     else:
         raise HTTPException(
             status_code=401,
