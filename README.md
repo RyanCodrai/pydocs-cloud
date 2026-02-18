@@ -1,76 +1,72 @@
-# Sourced.dev — From package to source code.
+# Sourced.dev
 
-Sourced.dev continuously ingests release metadata from major package managers to give your coding agent direct access to dependency source code as if it existed on your local machine.
+Source code search for every package on PyPI and npm.
 
-Currently tracking all 800,000+ Python packages and all 3,000,000+ NPM packages. New releases are indexed within 5 minutes of being published.
+[Website](https://sourced.dev) | [MCP Specification](https://modelcontextprotocol.io)
 
-## Getting Started
+Sourced.dev provides coding agents with direct access to dependency source code through the [Model Context Protocol](https://modelcontextprotocol.io) (MCP). Instead of relying on training data or web searches, agents can read, search, and navigate the actual source of any package — as if it were on your local machine.
 
-Install the MCP server in one command — it authenticates via GitHub and configures your coding agents automatically:
+Currently tracking all 800,000+ Python packages and all 3,000,000+ npm packages. New releases are indexed within 5 minutes of publication.
+
+## Quick Start
+
+Install the MCP server in one command. It authenticates via GitHub and configures your coding agents automatically:
 
 ```sh
 curl -sL sourced.dev/install | sh
 ```
 
-Supports Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex, Gemini CLI, Kiro, Zed, OpenCode, Copilot CLI, and Antigravity.
+The installer will:
 
-## How It Works
+1. Authorize with GitHub.
+2. Create an API key.
+3. Configure the MCP server for your selected agents.
 
-```mermaid
-graph TD
-    A["Coding Agent<br/>(e.g. Claude)"] -->|How does requests handle retries?| B["Sourced.dev<br/>API / MCP"]
-    B -->|grep pypi/requests 'retry'| C["Source Code<br/>Search Results"]
-```
+Restart your coding agents after installation to start using Sourced.
 
-1. **Lookup any package**: Query any package across ecosystems to see its versions, metadata, and source repository
-2. **Search source code**: Grep through any dependency's source code by providing `ecosystem/package_name` and a search pattern
-3. **Agent-native**: Coding agents like Claude can search dependency source code as naturally as they search your local codebase
+## Supported Agents
 
-## Why This Matters
+The following coding agents are supported out of the box:
 
-Today, coding agents either hallucinate API usage, rely on outdated training data, or waste time on slow web searches that hit 403s and rate limits. Sourced.dev gives them instant, reliable access to actual source code for any package — no web scraping, no blocked requests, no waiting.
+- [Claude Code](https://claude.ai/claude-code)
+- [Claude Desktop](https://claude.ai/download) (macOS)
+- [Cursor](https://cursor.sh)
+- [VS Code](https://code.visualstudio.com)
+- [Windsurf](https://codeium.com/windsurf)
+- [Codex](https://github.com/openai/codex)
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli)
+- [Kiro](https://kiro.dev)
+- [Zed](https://zed.dev)
+- [OpenCode](https://opencode.ai)
+- [Copilot CLI](https://githubnext.com/projects/copilot-cli)
+- [Antigravity](https://github.com/google-gemini/antigravity)
 
-- **Fast**: Sub-second API responses. No web searches, no 403s, no rate limits
-- **Fresh**: New releases indexed within 5 minutes of being published to any registry
-- **No hallucinations**: Agents work with real source code, not outdated training data
-- **Agentic search**: Grep through any dependency as if it were on your local machine
-- **Deep understanding**: Agents can read implementation details to provide accurate help
+## Capabilities
+
+Sourced.dev exposes the following tools to your coding agent via MCP:
+
+| Tool | Description |
+|------|-------------|
+| `read` | Read a file from a package's source code with line numbers. |
+| `grep` | Search for a regex pattern across a package's source tree. |
+| `glob` | Find files matching a glob pattern within a package. |
+
+All tools accept an `ecosystem` (e.g. `pypi`, `npm`), a `package_name`, and an optional `version` (defaults to latest).
 
 ## Ecosystem Support
 
-- [x] PyPI (800,000+ packages)
-- [x] npm (3,000,000+ packages)
-- [ ] Maven/Gradle
-- [ ] RubyGems
-- [ ] Crates.io (Rust)
+- **PyPI** — 800,000+ packages
+- **npm** — 3,000,000+ packages
+- Maven/Gradle — planned
+- RubyGems — planned
+- Crates.io (Rust) — planned
 
-## Architecture
+## Next Steps
 
-```mermaid
-graph LR
-    subgraph "PyPI Pipeline"
-        BQ[BigQuery] -->|scheduled export| GCS[GCS Datalake]
-        GCS -->|trigger| CF[Cloud Functions]
-        CF -->|enqueue| CT[Cloud Tasks]
-        CT -->|webhook| RA[Releases API]
-    end
-
-    subgraph "npm Pipeline"
-        NPM[npm Registry] -->|poll changes| NS[npm Sync API]
-    end
-
-    RA -->|upsert| PG[(PostgreSQL)]
-    NS -->|upsert| PG
-```
-
-- `terraform/` — GCP infrastructure as code
-- `api/` — FastAPI service for package lookups and source search
-- `functions/` — Cloud Functions for data processing
-
-## Contributing
-
-Sourced.dev is fully open source. Check out the [Issues](https://github.com/RyanCodrai/sourced/issues) page for tasks or open a PR.
+- Visit [sourced.dev](https://sourced.dev) to learn more.
+- View the [Issues](https://github.com/RyanCodrai/sourced/issues) page to see open tasks or report a bug.
+- Open a [Pull Request](https://github.com/RyanCodrai/sourced/pulls) to contribute.
 
 ## License
 
-MIT License — see LICENSE file for details.
+MIT License — see [LICENSE](LICENSE) for details.
