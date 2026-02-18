@@ -65,7 +65,7 @@ def _fetch_tarball_sync(owner: str, repo: str, commit_sha: str) -> bytes:
     return buf.getvalue()
 
 
-@gcs_cache(bucket_name="pydocs-datalake", path="cache/github-tarballs", ttl=TEN_YEARS, version=2)
+@gcs_cache(bucket_name="pydocs-datalake", path="cache/github-tarballs", ttl=TEN_YEARS, version=3)
 async def get_tarball(owner: str, repo: str, commit_sha: str, github_token: str) -> bytes:
     """Fetch a GitHub repo's files at a specific commit via Git pack protocol."""
     return await asyncio.to_thread(_fetch_tarball_sync, owner, repo, commit_sha)
