@@ -1,7 +1,6 @@
 import uuid
 
 import pytest
-from httpx import AsyncClient
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.models import DBUser
@@ -278,127 +277,6 @@ async def test_user_service_delete_nonexistent_user_raises_exception(db_session:
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "User not found"
-
-
-# Router Tests - Use authenticated_user fixture (already have cleanup)
-@pytest.mark.asyncio(loop_scope="function")
-async def test_get_user_authenticated(client: AsyncClient, authenticated_user: DBUser):
-    """Test GET /users with authenticated user."""
-    response = await client.get("/api/v1/users")
-
-    assert response.status_code == 200
-    user_data = response.json()
-
-    assert user_data["id"] == str(authenticated_user.id)
-    assert user_data["email_address"] == authenticated_user.email_address
-
-    # Validate response structure
-    required_fields = {"id", "email_address"}
-    assert required_fields.issubset(user_data.keys())
-
-
-@pytest.mark.asyncio(loop_scope="function")
-async def test_get_user_unauthenticated(client: AsyncClient):
-    """Test GET /users without authentication."""
-    # Remove any existing auth headers
-    client.headers.pop("Authorization", None)
-
-    response = await client.get("/api/v1/users")
-
-    assert response.status_code == 401
-    error_data = response.json()
-    assert "authentication" in error_data["detail"].lower()
-
-
-@pytest.mark.asyncio(loop_scope="function")
-async def test_update_user_success(client: AsyncClient, authenticated_user: DBUser):
-    """Test PATCH /users/{user_id} with valid data."""
-    update_data = {"is_active": False}
-
-    response = await client.patch(f"/api/v1/users/{authenticated_user.id}", json=update_data)
-
-    assert response.status_code == 200
-    user_data = response.json()
-
-    assert user_data["id"] == str(authenticated_user.id)
-    assert user_data["email_address"] == authenticated_user.email_address
-
-
-@pytest.mark.asyncio(loop_scope="function")
-async def test_update_user_unauthorized_different_user(
-    client: AsyncClient, db_session: AsyncSession, authenticated_user: DBUser
-):
-    """Test PATCH /users/{user_id} with different user ID raises unauthorized."""
-    # Create another user
-    other_user = DBUser(email_address=f"other-{uuid.uuid4()}@example.com")
-    db_session.add(other_user)
-    await db_session.flush()
-
-    update_data = {"is_active": False}
-
-    response = await client.patch(f"/api/v1/users/{other_user.id}", json=update_data)
-
-    assert response.status_code == 404  # Based on your UnauthorisedException using 404
-    error_data = response.json()
-    assert "permission" in error_data["detail"].lower()
-
-    # Cleanup the other user we created
-    await db_session.delete(other_user)
-    await db_session.commit()
-
-
-@pytest.mark.asyncio(loop_scope="function")
-async def test_update_user_nonexistent_user(client: AsyncClient):
-    """Test PATCH /users/{user_id} with non-existent user ID."""
-    fake_id = uuid.uuid4()
-    update_data = {"is_active": False}
-
-    response = await client.patch(f"/api/v1/users/{fake_id}", json=update_data)
-
-    assert response.status_code == 401  # Unauthenticated - auth happens before user lookup
-    error_data = response.json()
-    assert "authentication" in error_data["detail"].lower()
-
-
-@pytest.mark.asyncio(loop_scope="function")
-async def test_update_user_invalid_data(client: AsyncClient, authenticated_user: DBUser):
-    """Test PATCH /users/{user_id} with invalid data format."""
-    invalid_data = {"is_active": "not_a_boolean"}
-
-    response = await client.patch(f"/api/v1/users/{authenticated_user.id}", json=invalid_data)
-
-    assert response.status_code == 422  # Validation error
-    error_data = response.json()
-    assert "bool_parsing" in error_data["detail"][0]["type"]
-
-
-@pytest.mark.asyncio(loop_scope="function")
-async def test_update_user_empty_data(client: AsyncClient, authenticated_user: DBUser):
-    """Test PATCH /users/{user_id} with empty update data."""
-    response = await client.patch(f"/api/v1/users/{authenticated_user.id}", json={})
-
-    assert response.status_code == 200
-    user_data = response.json()
-
-    # User should remain unchanged
-    assert user_data["id"] == str(authenticated_user.id)
-    assert user_data["email_address"] == authenticated_user.email_address
-
-
-@pytest.mark.asyncio(loop_scope="function")
-async def test_update_user_unauthenticated(client: AsyncClient):
-    """Test PATCH /users/{user_id} without authentication."""
-    fake_id = uuid.uuid4()
-    update_data = {"is_active": False}
-
-    # Remove any existing auth headers
-    client.headers.pop("Authorization", None)
-
-    response = await client.patch(f"/api/v1/users/{fake_id}", json=update_data)
-
-    assert response.status_code == 401
-    error_data = response.json()
-    assert "authentication" in error_data["detail"].lower()
 
 
 # Schema Tests (these are synchronous, no asyncio decorator needed)

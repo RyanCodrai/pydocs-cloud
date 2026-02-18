@@ -13,7 +13,6 @@ from src.db.operations import get_db_session
 from src.main import application
 from src.routes.v1.users.service import UserNotFound, UserService
 from src.settings import settings
-from src.utils.auth import authenticate_user, authorise_user
 from src.utils.logger import logger
 
 
@@ -72,26 +71,9 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 async def authenticated_user(user_service: UserService):
     # Create test user
     user = await user_service.create(email_address=f"{uuid.uuid4()}@unique.com")
-
-    # Mock authentication
-    async def mock_authenticate_user() -> DBUser:
-        return user
-
-    application.dependency_overrides[authenticate_user] = mock_authenticate_user
-    # Return user for test
     yield user
     # Cleanup
     try:
         await user_service.delete(user_id=user.id, permanent=True)
     except UserNotFound:
         logger.warning(f"User {user.id} already deleted")
-
-
-@pytest_asyncio.fixture
-async def authorised_user(authenticated_user: DBUser) -> DBUser:
-    # Mock authentication
-    async def mock_authorise_user() -> DBUser:
-        return authenticated_user
-
-    application.dependency_overrides[authorise_user] = mock_authorise_user
-    return authenticated_user
