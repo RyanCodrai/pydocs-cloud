@@ -9,7 +9,7 @@ from src.utils.google_bucket import gcs_cache
 ONE_WEEK = 7 * 24 * 60 * 60
 
 
-@gcs_cache(bucket_name="pydocs-datalake", path="cache/github-readmes", ttl=ONE_WEEK, version=2)
+@gcs_cache(bucket_name="pydocs-datalake", path="cache/github-readmes", ttl=ONE_WEEK)
 async def get_github_readme(repo_url: str, github_token: str) -> str | None:
     """Get the README content from a GitHub repository."""
     parsed = urlparse(repo_url)

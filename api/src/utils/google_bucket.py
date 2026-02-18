@@ -1,5 +1,5 @@
 import hashlib
-import json
+import pickle
 import time
 from functools import wraps
 from pathlib import Path
@@ -56,19 +56,19 @@ def gcs_cache(bucket_name: str, path: str, ttl: int, version: int = 1):
         async def wrapper(*args, **kwargs):
             cache_bytes = f"{func.__name__}:{args}:{sorted(kwargs.items())}:{version}".encode()
             cache_key = hashlib.blake2b(cache_bytes, digest_size=16).hexdigest()
-            cache_path = f"{path}/{cache_key}.json"
+            cache_path = f"{path}/{cache_key}.pkl"
             async with Storage() as client:
                 try:
                     blob_data = await client.download(bucket_name, cache_path)
-                    cache_entry = json.loads(blob_data)
+                    cache_entry = pickle.loads(blob_data)
                     if time.time() - cache_entry["timestamp"] < ttl:
                         return cache_entry["result"]
                 except Exception:
                     pass
 
                 result = await func(*args, **kwargs)
-                json_data = json.dumps({"result": result, "timestamp": time.time()}).encode()
-                await client.upload(bucket_name, cache_path, json_data)
+                pkl_data = pickle.dumps({"result": result, "timestamp": time.time()})
+                await client.upload(bucket_name, cache_path, pkl_data)
                 return result
 
         return wrapper

@@ -576,7 +576,8 @@ for part in parts[:-1]:
 if parts[-1] not in target:
     target[parts[-1]] = {}
 
-target[parts[-1]]['sourced.dev'] = server_config
+target[parts[-1]]['sourced'] = server_config
+target[parts[-1]].pop('sourced.dev', None)
 
 config_dir = os.path.dirname(config_file)
 if config_dir:
@@ -616,9 +617,9 @@ if os.path.exists(config_file):
         # Invalid TOML — refuse to overwrite
         sys.exit(1)
 
-# Remove existing [mcp_servers."sourced.dev"] section (header + all lines until next [section] or EOF)
+# Remove existing [mcp_servers."sourced.dev"] or [mcp_servers.sourced] section
 content = re.sub(
-    r'\n*\[mcp_servers\."sourced\.dev"\]\n(?:(?!\[)[^\n]*\n?)*',
+    r'\n*\[mcp_servers\.(?:"sourced\.dev"|sourced)\]\n(?:(?!\[)[^\n]*\n?)*',
     '',
     content
 )
@@ -626,7 +627,7 @@ content = content.rstrip()
 
 # Build the new section
 new_section = (
-    '[mcp_servers."sourced.dev"]\n'
+    '[mcp_servers.sourced]\n'
     'url = "' + mcp_url + '"\n'
     'http_headers = { Authorization = "Bearer ' + api_key + '" }\n'
 )

@@ -17,7 +17,7 @@ def _get_access_token() -> str:
     return credentials.token
 
 
-@gcs_cache(bucket_name="pydocs-datalake", path="cache/embeddings", ttl=TEN_YEARS, version=2)
+@gcs_cache(bucket_name="pydocs-datalake", path="cache/embeddings", ttl=TEN_YEARS)
 async def embed_text(text: str) -> list[float]:
     """Generate embeddings using Vertex AI."""
     project = os.environ.get("GOOGLE_CLOUD_PROJECT", "pydocs-prod")
