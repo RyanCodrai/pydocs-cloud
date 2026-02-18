@@ -1,8 +1,12 @@
 # Sourced.dev
 
-Source code search for every package on PyPI and npm.
+[![Website](https://img.shields.io/badge/Website-sourced.dev-blue)](https://sourced.dev)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![PyPI Packages](https://img.shields.io/badge/PyPI_Packages-800k+-orange)](https://sourced.dev)
+[![npm Packages](https://img.shields.io/badge/npm_Packages-3M+-yellow)](https://sourced.dev)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-purple)](https://modelcontextprotocol.io)
 
-[Website](https://sourced.dev) | [MCP Specification](https://modelcontextprotocol.io)
+Source code search for every package on PyPI and npm.
 
 Sourced.dev provides coding agents with direct access to dependency source code through the [Model Context Protocol](https://modelcontextprotocol.io) (MCP). Instead of relying on training data or web searches, agents can read, search, and navigate the actual source of any package — as if it were on your local machine.
 
