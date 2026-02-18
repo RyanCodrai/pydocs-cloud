@@ -4,6 +4,16 @@ Sourced.dev continuously ingests release metadata from major package managers to
 
 Currently tracking all 800,000+ Python packages and all 3,000,000+ NPM packages. New releases are indexed within 5 minutes of being published.
 
+## Getting Started
+
+Install the MCP server in one command — it authenticates via GitHub and configures your coding agents automatically:
+
+```sh
+curl -sL sourced.dev/install | sh
+```
+
+Supports Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex, Gemini CLI, Kiro, Zed, OpenCode, Copilot CLI, and Antigravity.
+
 ## How It Works
 
 ```mermaid
@@ -59,7 +69,7 @@ graph LR
 
 ## Contributing
 
-Sourced.dev is fully open source. Check out the [Issues](../../issues) page for tasks or open a PR.
+Sourced.dev is fully open source. Check out the [Issues](https://github.com/RyanCodrai/sourced/issues) page for tasks or open a PR.
 
 ## License
 

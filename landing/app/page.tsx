@@ -127,7 +127,7 @@ export default function Home() {
               </div>
               <p className="text-base text-stone-900 leading-relaxed">
                 Not just the popular ones — all packages are continually
-                indexed in real time. 700k+ Python and 3.5m+ NPM packages.
+                indexed in real time. 800k+ Python and 3m+ NPM packages.
               </p>
             </div>
 
