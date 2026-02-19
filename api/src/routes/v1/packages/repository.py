@@ -85,15 +85,19 @@ class PackageRepository:
                 else_=getattr(DBPackage, field),
             )
 
-        # Clear cached source_code when description changes
+        # Clear cached source_code and reset status when description changes
+        description_changed = (
+            excluded["description"].is_not(None)
+            & (excluded.last_seen > DBPackage.last_seen)
+            & excluded["description"].is_distinct_from(DBPackage.description)
+        )
         update_dict["source_code"] = case(
-            (
-                excluded["description"].is_not(None)
-                & (excluded.last_seen > DBPackage.last_seen)
-                & excluded["description"].is_distinct_from(DBPackage.description),
-                null(),
-            ),
+            (description_changed, null()),
             else_=DBPackage.source_code,
+        )
+        update_dict["status"] = case(
+            (description_changed, "unprocessed"),
+            else_=DBPackage.status,
         )
 
         update_dict["first_seen"] = func.least(DBPackage.first_seen, data.first_seen)

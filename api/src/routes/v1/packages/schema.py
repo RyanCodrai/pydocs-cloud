@@ -12,6 +12,7 @@ class PackageUpdate(BaseModel):
     home_page: str | None = None
     project_urls: dict[str, str] | None = None
     source_code: str | None = None
+    status: str | None = None
     first_seen: datetime | None = None
     last_seen: datetime | None = None
 

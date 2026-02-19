@@ -30,6 +30,7 @@ from src.utils.github_extraction import extract_github_candidates
 from src.utils.github_readme import get_readmes_for_repos
 from src.utils.github_source import get_file_content, get_file_tree, get_tarball
 from src.utils.logger import logger
+from src.utils.registry_source import get_npm_tarball, get_pypi_tarball
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
@@ -103,31 +104,38 @@ async def _find_github_repos(
 
 async def _resolve_source_code(
     ecosystem: str, package_name: str, package_service: PackageService, github_token: str
-) -> str:
-    """Resolve the GitHub source code URL for a package, discovering it if needed."""
+) -> str | None:
+    """Resolve the GitHub source code URL for a package, discovering it if needed.
+
+    Returns the GitHub URL if found, or None if no repository exists.
+    """
     package = await package_service.retrieve_by_ecosystem_and_name(ecosystem=ecosystem, package_name=package_name)
 
-    if package.source_code:
-        return package.source_code
+    if package.status == "processed":
+        return package.source_code  # URL or None — we already checked
 
+    # status == "unprocessed": run the GitHub candidate extraction pipeline
     scored_repos = await _find_github_repos(
         description=package.description,
         project_urls=package.project_urls,
         home_page=package.home_page,
         github_token=github_token,
     )
-    if not scored_repos:
-        raise ValueError(f"No source code repository found for '{package_name}'")
 
-    source_code = scored_repos[0][0]
-    await package_service.update(package, PackageUpdate(source_code=source_code))
-    return source_code
+    if scored_repos:
+        source_code = scored_repos[0][0]
+        await package_service.update(package, PackageUpdate(source_code=source_code, status="processed"))
+        return source_code
+
+    # No repo found — mark as processed so we don't retry
+    await package_service.update(package, PackageUpdate(status="processed"))
+    return None
 
 
-async def resolve_package(ecosystem: str, package_name: str, version: str | None = None) -> tuple[bytes, str]:
-    """Resolve a package to a tarball and commit SHA.
+async def resolve_package(ecosystem: str, package_name: str, version: str | None = None) -> tuple[bytes, str, str]:
+    """Resolve a package to a tarball and version/commit identifier.
 
-    Returns (tarball_bytes, commit_sha).
+    Returns (tarball_bytes, identifier, source_label).
     """
     if ecosystem not in {"pypi", "npm"}:
         raise ValueError(f"Ecosystem '{ecosystem}' is not supported")
@@ -155,18 +163,32 @@ async def resolve_package(ecosystem: str, package_name: str, version: str | None
         if not releases:
             raise ValueError(f"No releases found for {ecosystem}/{package_name}")
 
-        commit_cache_service = CommitCacheService(db_session=session)
-        commit_sha = await commit_cache_service.get_commit_sha(
-            github_url=github_url, timestamp=releases[0].last_seen, github_token=github_token
-        )
+        release = releases[0]
 
-    # Parse owner/repo from GitHub URL
-    path = github_url.rstrip("/").split("github.com/")[-1]
-    segments = path.split("/")
-    owner, repo = segments[0], segments[1]
+        if github_url:
+            # GitHub path: resolve commit and download from GitHub
+            commit_cache_service = CommitCacheService(db_session=session)
+            commit_sha = await commit_cache_service.get_commit_sha(
+                github_url=github_url, timestamp=release.last_seen, github_token=github_token
+            )
 
-    tarball_bytes = await get_tarball(owner, repo, commit_sha, github_token)
-    return tarball_bytes, commit_sha
+            path = github_url.rstrip("/").split("github.com/")[-1]
+            segments = path.split("/")
+            owner, repo = segments[0], segments[1]
+
+            tarball_bytes = await get_tarball(owner, repo, commit_sha, github_token)
+            source_label = f"Source: GitHub repository archive ({owner}/{repo}@{commit_sha[:8]})"
+            return tarball_bytes, commit_sha, source_label
+
+    # Fallback: download sdist/tarball directly from the registry
+    release_version = version or release.version
+    if ecosystem == "pypi":
+        tarball_bytes = await get_pypi_tarball(package_name, release_version)
+        source_label = f"Source: PyPI sdist ({package_name}=={release_version})"
+    else:
+        tarball_bytes = await get_npm_tarball(package_name, release_version)
+        source_label = f"Source: npm registry tarball ({package_name}@{release_version})"
+    return tarball_bytes, release_version, source_label
 
 
 @mcp.tool()
@@ -183,7 +205,7 @@ async def glob(
         version: Optional package version (defaults to latest)
     """
     try:
-        tarball_bytes, _ = await resolve_package(ecosystem, package_name, version)
+        tarball_bytes, _, source_label = await resolve_package(ecosystem, package_name, version)
     except (HTTPException, ValueError) as e:
         return f"Error: {e}"
 
@@ -203,6 +225,7 @@ async def glob(
     output = "\n".join(matches[:MAX_RESULTS])
     if total > MAX_RESULTS:
         output += f"\n\n... and {total - MAX_RESULTS} more files ({total} total). Use the `path` parameter to narrow your search."
+    output += f"\n\n{source_label}"
     return output
 
 
@@ -282,7 +305,7 @@ async def grep(
         return "Error: output_mode must be one of: files_with_matches, content, count"
 
     try:
-        tarball_bytes, _ = await resolve_package(ecosystem, package_name, version)
+        tarball_bytes, _, source_label = await resolve_package(ecosystem, package_name, version)
     except (HTTPException, ValueError) as e:
         return f"Error: {e}"
 
@@ -377,6 +400,7 @@ async def grep(
     output = "\n".join(entries)
     if len(output) > MAX_OUTPUT_CHARS:
         output = output[:MAX_OUTPUT_CHARS] + "\n\n... output truncated at 30,000 characters."
+    output += f"\n\n{source_label}"
     return output
 
 
@@ -400,7 +424,7 @@ async def read(
         limit: Maximum number of lines to return (default: 2000)
     """
     try:
-        tarball_bytes, _ = await resolve_package(ecosystem, package_name, version)
+        tarball_bytes, _, source_label = await resolve_package(ecosystem, package_name, version)
     except (HTTPException, ValueError) as e:
         return f"Error: {e}"
 
@@ -454,6 +478,7 @@ async def read(
             "or use the grep tool to search for specific content."
         )
 
+    output += f"\n\n{source_label}"
     return output
 
 

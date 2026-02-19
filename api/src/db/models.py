@@ -33,6 +33,7 @@ class DBPackage(SQLModel, table=True):
         default_factory=dict, sa_column=Column(JSONB, nullable=False, server_default="{}")
     )
     source_code: str | None = Field(default=None)
+    status: str = Field(default="unprocessed")
     first_seen: datetime | None = Field(default=None, index=True)
     last_seen: datetime | None = Field(default=None, index=True)
 
