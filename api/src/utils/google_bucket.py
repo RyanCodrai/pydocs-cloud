@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 import aiohttp
+import zstandard as zstd
 from gcloud.aio.storage import Storage
 
 
@@ -69,6 +70,51 @@ def gcs_cache(bucket_name: str, path: str, ttl: int, version: int = 1):
                 result = await func(*args, **kwargs)
                 pkl_data = pickle.dumps({"result": result, "timestamp": time.time()})
                 await client.upload(bucket_name, cache_path, pkl_data)
+                return result
+
+        return wrapper
+
+    return decorator
+
+
+_zstd_compressor = zstd.ZstdCompressor(level=5)
+_zstd_decompressor = zstd.ZstdDecompressor()
+
+
+def nfs_gcs_cache(bucket_name: str, path: str, ttl: int, nfs_mount: str = "/mnt/nfs-cache", version: int = 1):
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            cache_bytes = f"{func.__name__}:{args}:{sorted(kwargs.items())}:{version}".encode()
+            cache_key = hashlib.blake2b(cache_bytes, digest_size=16).hexdigest()
+            cache_path = f"{path}/{cache_key}.zst"
+            nfs_file = Path(nfs_mount) / cache_path
+
+            # 1. Try NFS (fastest — local SSD)
+            try:
+                raw = _zstd_decompressor.decompress(nfs_file.read_bytes())
+                cache_entry = pickle.loads(raw)
+                if time.time() - cache_entry["timestamp"] < ttl:
+                    return cache_entry["result"]
+            except Exception:
+                pass
+
+            # 2. Fall back to GCS
+            async with Storage() as client:
+                try:
+                    blob_data = await client.download(bucket_name, cache_path)
+                    raw = _zstd_decompressor.decompress(blob_data)
+                    cache_entry = pickle.loads(raw)
+                    if time.time() - cache_entry["timestamp"] < ttl:
+                        return cache_entry["result"]
+                except Exception:
+                    pass
+
+                # 3. Compute, then write to GCS (rclone syncs to NFS)
+                result = await func(*args, **kwargs)
+                pkl_data = pickle.dumps({"result": result, "timestamp": time.time()})
+                compressed = _zstd_compressor.compress(pkl_data)
+                await client.upload(bucket_name, cache_path, compressed)
                 return result
 
         return wrapper

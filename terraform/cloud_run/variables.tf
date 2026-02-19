@@ -55,3 +55,13 @@ variable "landing_docker_image" {
   type        = string
 }
 
+variable "nfs_cache_ip" {
+  description = "Internal IP of the NFS cache VM"
+  type        = string
+}
+
+variable "repo_cache_bucket_name" {
+  description = "Name of the GCS bucket for repo cache"
+  type        = string
+}
+

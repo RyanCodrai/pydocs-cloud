@@ -16,6 +16,11 @@ variable "environment" {
   type        = string
 }
 
+variable "repo_cache_bucket_name" {
+  description = "Name of the GCS bucket for NFS repo cache sync"
+  type        = string
+}
+
 # Reference the default VPC network
 data "google_compute_network" "default" {
   name = "default"

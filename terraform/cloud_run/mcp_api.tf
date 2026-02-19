@@ -38,6 +38,13 @@ resource "google_storage_bucket_iam_member" "mcp_api_bucket_access" {
   member = "serviceAccount:${google_service_account.mcp_api.email}"
 }
 
+# Grant Storage Object Admin role for repo cache bucket (write-through cache)
+resource "google_storage_bucket_iam_member" "mcp_api_repo_cache_access" {
+  bucket = var.repo_cache_bucket_name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.mcp_api.email}"
+}
+
 # Grant Cloud SQL Client role for database access
 resource "google_project_iam_member" "mcp_api_cloudsql" {
   project = var.project_id
@@ -53,15 +60,16 @@ resource "google_cloud_run_v2_service" "mcp_api" {
   invoker_iam_disabled = true
 
   template {
-    service_account = google_service_account.mcp_api.email
-    timeout         = "300s"
+    service_account       = google_service_account.mcp_api.email
+    execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
+    timeout               = "300s"
 
     scaling {
       min_instance_count = 1
       max_instance_count = 10
     }
 
-    # VPC connector for Cloud SQL access
+    # VPC connector for Cloud SQL and NFS access
     vpc_access {
       network_interfaces {
         network    = data.google_compute_network.default.id
@@ -70,8 +78,22 @@ resource "google_cloud_run_v2_service" "mcp_api" {
       egress = "PRIVATE_RANGES_ONLY"
     }
 
+    volumes {
+      name = "nfs-cache"
+      nfs {
+        server    = var.nfs_cache_ip
+        path      = "/mnt/nfs-cache"
+        read_only = true
+      }
+    }
+
     containers {
       image = var.docker_image
+
+      volume_mounts {
+        name       = "nfs-cache"
+        mount_path = "/mnt/nfs-cache"
+      }
 
       ports {
         container_port = 8080

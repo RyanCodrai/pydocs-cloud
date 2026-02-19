@@ -17,3 +17,8 @@ output "releases_path" {
   description = "Path to releases zone (raw package releases from all ecosystems)"
   value       = "gs://${google_storage_bucket.pydocs_datalake.name}/releases/"
 }
+
+output "repo_cache_bucket_name" {
+  description = "Name of the repo cache bucket for NFS server sync"
+  value       = google_storage_bucket.repo_cache.name
+}

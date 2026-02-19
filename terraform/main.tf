@@ -171,20 +171,23 @@ data "google_artifact_registry_docker_image" "landing_image" {
 module "cloud_run" {
   source = "./cloud_run"
 
-  project_id                       = local.project_id
-  region                           = local.region
-  environment                      = local.environment
-  docker_image                     = data.google_artifact_registry_docker_image.api_image.self_link
-  cloud_sql_connection_name        = module.cloud_sql.instance_connection_name
-  data_bucket_name                 = module.storage.bucket_name
-  landing_docker_image             = data.google_artifact_registry_docker_image.landing_image.self_link
+  project_id                = local.project_id
+  region                    = local.region
+  environment               = local.environment
+  docker_image              = data.google_artifact_registry_docker_image.api_image.self_link
+  cloud_sql_connection_name = module.cloud_sql.instance_connection_name
+  data_bucket_name          = module.storage.bucket_name
+  landing_docker_image      = data.google_artifact_registry_docker_image.landing_image.self_link
+  nfs_cache_ip              = module.compute.nfs_cache_internal_ip
+  repo_cache_bucket_name    = module.storage.repo_cache_bucket_name
 
   depends_on = [
     google_project_service.required_apis["run.googleapis.com"],
     google_project_service.required_apis["artifactregistry.googleapis.com"],
     module.cloud_sql,
     module.secrets,
-    module.cloud_tasks
+    module.cloud_tasks,
+    module.compute
   ]
 }
 
@@ -192,12 +195,14 @@ module "cloud_run" {
 module "compute" {
   source = "./compute"
 
-  project_id  = local.project_id
-  region      = local.region
-  environment = local.environment
+  project_id             = local.project_id
+  region                 = local.region
+  environment            = local.environment
+  repo_cache_bucket_name = module.storage.repo_cache_bucket_name
 
   depends_on = [
-    google_project_service.required_apis["compute.googleapis.com"]
+    google_project_service.required_apis["compute.googleapis.com"],
+    module.storage
   ]
 }
 

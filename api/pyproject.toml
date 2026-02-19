@@ -36,6 +36,12 @@ dependencies = [
     # MCP Server
     "mcp",
 
+    # Compression
+    "zstandard",
+
+    # Regex
+    "google-re2",
+
     # Utilities
     "tenacity",
 ]

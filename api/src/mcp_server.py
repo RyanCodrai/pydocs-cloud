@@ -206,6 +206,49 @@ async def glob(
     return output
 
 
+def _compile_re2(pattern: str, case_insensitive: bool = False, multiline: bool = False):
+    """Compile a regex with google-re2, falling back to stdlib re if unsupported."""
+    try:
+        import re2
+
+        opts = re2.Options()
+        if case_insensitive:
+            opts.case_sensitive = False
+        if multiline:
+            opts.dot_nl = True
+
+        # Prepend (?m) so ^ and $ match line boundaries when searching whole files
+        effective_pattern = f"(?m){pattern}" if not multiline else pattern
+        return re2.compile(effective_pattern, options=opts), True
+    except (ImportError, re2.error):
+        # Fall back to stdlib re (e.g. for backreferences, lookaround)
+        flags = 0
+        if case_insensitive:
+            flags |= re.IGNORECASE
+        if multiline:
+            flags |= re.DOTALL | re.MULTILINE
+        return re.compile(pattern, flags), False
+
+
+def _is_binary(data: bytes, sample_size: int = 8192) -> bool:
+    """Check if data looks like a binary file."""
+    return b"\x00" in data[:sample_size]
+
+
+def _byte_offset_to_line_num(data: bytes, offset: int) -> int:
+    """Convert a byte offset to a 1-indexed line number."""
+    return data[:offset].count(b"\n") + 1
+
+
+def _extract_line_at_offset(data: bytes, offset: int) -> str:
+    """Extract and decode the line containing the given byte offset."""
+    line_start = data.rfind(b"\n", 0, offset) + 1
+    line_end = data.find(b"\n", offset)
+    if line_end == -1:
+        line_end = len(data)
+    return data[line_start:line_end].decode("utf-8", errors="replace")
+
+
 @mcp.tool()
 async def grep(
     ecosystem: str,
@@ -243,14 +286,8 @@ async def grep(
     except (HTTPException, ValueError) as e:
         return f"Error: {e}"
 
-    flags = 0
-    if case_insensitive:
-        flags |= re.IGNORECASE
-    if multiline:
-        flags |= re.DOTALL | re.MULTILINE
-
     try:
-        regex = re.compile(pattern, flags)
+        regex, using_re2 = _compile_re2(pattern, case_insensitive, multiline)
     except re.error as e:
         return f"Error: Invalid regex pattern: {e}"
 
@@ -261,10 +298,13 @@ async def grep(
     if glob:
         glob_regex = re.compile(glob_module.translate(glob, recursive=True, include_hidden=True))
 
-    # Collect raw matches per file
-    matched_files: dict[str, list[tuple[int, str]]] = {}
-    with tarfile.open(fileobj=io.BytesIO(tarball_bytes), mode="r:gz") as tar:
-        for member in tar.getmembers():
+    entries: list[str] = []
+    entry_count = 0
+    # Target number of entries we need after applying offset
+    target = (offset + head_limit) if head_limit > 0 else 0
+
+    with tarfile.open(fileobj=io.BytesIO(tarball_bytes), mode="r:") as tar:
+        while (member := tar.next()) is not None:
             if not member.isfile():
                 continue
             parts = member.name.split("/", 1)
@@ -281,44 +321,56 @@ async def grep(
                 f = tar.extractfile(member)
                 if f is None:
                     continue
-                content = f.read().decode("utf-8", errors="replace")
-            except (UnicodeDecodeError, OSError):
+                raw = f.read()
+            except OSError:
                 continue
 
-            if multiline:
-                content_lines = content.splitlines()
-                for match in regex.finditer(content):
-                    line_num = content[: match.start()].count("\n") + 1
-                    if file_path not in matched_files:
-                        matched_files[file_path] = []
-                    matched_files[file_path].append((line_num, content_lines[line_num - 1]))
-            else:
-                for line_num, line in enumerate(content.splitlines(), start=1):
-                    if regex.search(line):
-                        if file_path not in matched_files:
-                            matched_files[file_path] = []
-                        matched_files[file_path].append((line_num, line))
+            # Skip binary files
+            if _is_binary(raw):
+                continue
 
-    if not matched_files:
+            # Search raw bytes — no decode needed for match detection
+            if output_mode == "files_with_matches":
+                if regex.search(raw if using_re2 else raw.decode("utf-8", errors="replace")):
+                    entry_count += 1
+                    if entry_count > offset:
+                        entries.append(file_path)
+                    if target and entry_count >= target:
+                        break
+
+            elif output_mode == "count":
+                text = raw if using_re2 else raw.decode("utf-8", errors="replace")
+                matches = regex.findall(text)
+                if matches:
+                    entry_count += 1
+                    if entry_count > offset:
+                        entries.append(f"{file_path}:{len(matches)}")
+                    if target and entry_count >= target:
+                        break
+
+            elif output_mode == "content":
+                text = raw if using_re2 else raw.decode("utf-8", errors="replace")
+                for m in regex.finditer(text):
+                    entry_count += 1
+                    if entry_count > offset:
+                        if using_re2:
+                            line_num = _byte_offset_to_line_num(raw, m.start())
+                            line = _extract_line_at_offset(raw, m.start())
+                        else:
+                            line_num = text[: m.start()].count("\n") + 1
+                            line_start = text.rfind("\n", 0, m.start()) + 1
+                            line_end = text.find("\n", m.start())
+                            if line_end == -1:
+                                line_end = len(text)
+                            line = text[line_start:line_end]
+                        entries.append(f"{file_path}:{line_num}:{line}")
+                    if target and entry_count >= target:
+                        break
+                if target and entry_count >= target:
+                    break
+
+    if not entries:
         return "No matches found."
-
-    # Build entries based on output_mode
-    entries: list[str] = []
-    if output_mode == "files_with_matches":
-        entries = list(matched_files.keys())
-    elif output_mode == "content":
-        for fp, matches in matched_files.items():
-            for line_num, line in matches:
-                entries.append(f"{fp}:{line_num}:{line}")
-    elif output_mode == "count":
-        for fp, matches in matched_files.items():
-            entries.append(f"{fp}:{len(matches)}")
-
-    # Apply offset → head_limit
-    if offset > 0:
-        entries = entries[offset:]
-    if head_limit > 0:
-        entries = entries[:head_limit]
 
     # Join and truncate at 30,000 chars
     MAX_OUTPUT_CHARS = 30_000

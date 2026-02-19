@@ -1,33 +1,40 @@
 """GitHub source code utilities — tarball-based file access."""
 
+import gzip
 import io
 import tarfile
 
 import aiohttp
 
-from src.utils.google_bucket import gcs_cache
+from src.utils.google_bucket import nfs_gcs_cache
 
 TEN_YEARS = 10 * 365 * 24 * 60 * 60
 
 
 async def _download_tarball(owner: str, repo: str, commit_sha: str, github_token: str) -> bytes:
-    """Download a tarball from the GitHub API."""
+    """Download a tarball from the GitHub API and strip gzip layer.
+
+    GitHub returns .tar.gz — we decompress gzip here so the cache stores
+    raw tar bytes. Zstd compression is handled by the cache decorator,
+    giving ~10x faster decompression on reads.
+    """
     url = f"https://api.github.com/repos/{owner}/{repo}/tarball/{commit_sha}"
     headers = {"Authorization": f"Bearer {github_token}"}
     async with aiohttp.ClientSession() as session:
         async with session.get(url, headers=headers, allow_redirects=True) as response:
             response.raise_for_status()
-            return await response.read()
+            gz_bytes = await response.read()
+            return gzip.decompress(gz_bytes)
 
 
-@gcs_cache(bucket_name="pydocs-datalake", path="cache/github-tarballs", ttl=TEN_YEARS, version=3)
+@nfs_gcs_cache(bucket_name="pydocs-repo-cache", path="cache/github-tarballs", ttl=TEN_YEARS, version=4)
 async def get_tarball(owner: str, repo: str, commit_sha: str, github_token: str) -> bytes:
     """Fetch a GitHub repo's tarball at a specific commit."""
     return await _download_tarball(owner, repo, commit_sha, github_token)
 
 
 def _open_tarball(tarball_bytes: bytes) -> tarfile.TarFile:
-    return tarfile.open(fileobj=io.BytesIO(tarball_bytes), mode="r:gz")
+    return tarfile.open(fileobj=io.BytesIO(tarball_bytes), mode="r:")
 
 
 def get_file_tree(tarball_bytes: bytes) -> list[str]:
