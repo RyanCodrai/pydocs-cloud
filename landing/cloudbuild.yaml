@@ -1,4 +1,4 @@
-# Cloud Build configuration for building, pushing, and deploying the API Docker image
+# Cloud Build configuration for building, pushing, and deploying the landing page
 steps:
   # Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
@@ -17,50 +17,14 @@ steps:
       - '--all-tags'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
 
-  # Deploy to all Cloud Run services that share this image
+  # Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
       - 'run'
       - 'services'
       - 'update'
-      - 'pydocs-mcp-api'
-      - '--image'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID'
-      - '--region'
-      - '${_REGION}'
-
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
-    args:
-      - 'run'
-      - 'services'
-      - 'update'
-      - 'pydocs-user-api'
-      - '--image'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID'
-      - '--region'
-      - '${_REGION}'
-
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
-    args:
-      - 'run'
-      - 'services'
-      - 'update'
-      - 'pydocs-releases-api'
-      - '--image'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID'
-      - '--region'
-      - '${_REGION}'
-
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
-    args:
-      - 'run'
-      - 'services'
-      - 'update'
-      - 'pydocs-npm-sync-api'
+      - 'sourced-landing'
       - '--image'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID'
       - '--region'
@@ -70,7 +34,7 @@ steps:
 substitutions:
   _REGION: 'europe-west2'
   _REPOSITORY: 'pydocs-images'
-  _IMAGE_NAME: 'pydocs-api'
+  _IMAGE_NAME: 'sourced-landing'
 
 options:
   logging: CLOUD_LOGGING_ONLY
