@@ -94,13 +94,12 @@ class DBFeedback(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"onupdate": datetime.utcnow})
 
 
-# class DBQueryHistory(SQLModel, table=True):
-#     __tablename__ = "queries"
-#     id: UUID = Field(default_factory=uuid4, primary_key=True)
-#     user_id: UUID = Field(foreign_key="users.id", index=True)
-#     api_key_id: UUID | None = Field(default=None, foreign_key="api_keys.id", index=True)  # Nullable API key reference
-#     query_text: str
-#     packages_detected: list = Field(default_factory=list, sa_column=Column(JSON))  # JSON array of detected packages
-#     credits_consumed: int = Field(default=1)
-#     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-#     updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"onupdate": datetime.utcnow})
+class DBApiCall(SQLModel, table=True):
+    __tablename__ = "api_calls"
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id", index=True)
+    endpoint: str = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow, sa_column_kwargs={"onupdate": datetime.utcnow}
+    )

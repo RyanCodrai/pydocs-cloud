@@ -14,6 +14,7 @@ from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from src.db.operations import managed_session
+from src.routes.v1.api_calls.service import ApiCallService
 from src.routes.v1.apikeys.service import APIKeyService
 from src.routes.v1.commit_cache.service import CommitCacheService
 from src.routes.v1.feedback.schema import FeedbackType
@@ -132,6 +133,15 @@ async def _resolve_source_code(
     return None
 
 
+async def track_api_call(endpoint: str) -> None:
+    access_token = get_access_token()
+    if not access_token:
+        return
+    user_id = uuid.UUID(access_token.client_id)
+    async with managed_session() as session:
+        await ApiCallService(db_session=session).create(user_id=user_id, endpoint=endpoint)
+
+
 async def resolve_package(ecosystem: str, package_name: str, version: str | None = None) -> tuple[bytes, str, str]:
     """Resolve a package to a tarball and version/commit identifier.
 
@@ -209,6 +219,7 @@ async def glob(
     except (HTTPException, ValueError) as e:
         return f"Error: {e}"
 
+    await track_api_call("glob")
     files = get_file_tree(tarball_bytes)
 
     if path:
@@ -308,6 +319,8 @@ async def grep(
         tarball_bytes, _, source_label = await resolve_package(ecosystem, package_name, version)
     except (HTTPException, ValueError) as e:
         return f"Error: {e}"
+
+    await track_api_call("grep")
 
     try:
         regex, using_re2 = _compile_re2(pattern, case_insensitive, multiline)
@@ -428,6 +441,8 @@ async def read(
     except (HTTPException, ValueError) as e:
         return f"Error: {e}"
 
+    await track_api_call("read")
+
     try:
         content = get_file_content(tarball_bytes, file_path)
     except FileNotFoundError as e:
@@ -493,6 +508,8 @@ async def submit_feedback(feedback_type: FeedbackType, text: str) -> str:
     access_token = get_access_token()
     if not access_token:
         return "Error: Authentication required"
+
+    await track_api_call("submit_feedback")
 
     user_id = uuid.UUID(access_token.client_id)
 
