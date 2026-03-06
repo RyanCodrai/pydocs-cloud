@@ -1,4 +1,4 @@
-# Cloud Build configuration for building and pushing the API Docker image
+# Cloud Build configuration for building, pushing, and deploying the API Docker image
 steps:
   # Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
@@ -16,6 +16,55 @@ steps:
       - 'push'
       - '--all-tags'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+
+  # Deploy to all Cloud Run services that share this image
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'update'
+      - 'pydocs-mcp-api'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID'
+      - '--region'
+      - '${_REGION}'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'update'
+      - 'pydocs-user-api'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID'
+      - '--region'
+      - '${_REGION}'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'update'
+      - 'pydocs-releases-api'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID'
+      - '--region'
+      - '${_REGION}'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'update'
+      - 'pydocs-npm-sync-api'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:$BUILD_ID'
+      - '--region'
+      - '${_REGION}'
 
 # Substitutions for flexibility
 substitutions:
