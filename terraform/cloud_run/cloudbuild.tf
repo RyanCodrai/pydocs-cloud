@@ -1,4 +1,4 @@
-# Cloud Build trigger for automatic deployment on push to main
+# Cloud Build triggers for automatic deployment on push to main
 #
 # PREREQUISITE: You must create a GitHub connection manually first:
 #   1. Go to https://console.cloud.google.com/cloud-build/repositories
@@ -7,7 +7,7 @@
 #   4. Name the connection "github"
 #   5. Link the repository "RyanCodrai/pydocs-cloud"
 #
-# Then run `terraform apply` to create the trigger.
+# Then run `terraform apply` to create the triggers.
 
 # Cloud Build v2 repository link (requires manual GitHub connection above)
 resource "google_cloudbuildv2_repository" "sourced" {
@@ -17,7 +17,7 @@ resource "google_cloudbuildv2_repository" "sourced" {
   remote_uri        = "https://github.com/RyanCodrai/pydocs-cloud.git"
 }
 
-# Trigger: build and deploy API on push to main
+# Trigger: build and deploy API on push to main (api/ changes only)
 resource "google_cloudbuild_trigger" "deploy_api" {
   name     = "deploy-api-on-push"
   location = var.region
@@ -32,6 +32,23 @@ resource "google_cloudbuild_trigger" "deploy_api" {
   included_files = ["api/**"]
 
   filename = "api/cloudbuild.yaml"
+}
+
+# Trigger: build and deploy landing page on push to main (landing/ changes only)
+resource "google_cloudbuild_trigger" "deploy_landing" {
+  name     = "deploy-landing-on-push"
+  location = var.region
+
+  repository_event_config {
+    repository = google_cloudbuildv2_repository.sourced.id
+    push {
+      branch = "^main$"
+    }
+  }
+
+  included_files = ["landing/**"]
+
+  filename = "landing/cloudbuild.yaml"
 }
 
 # Grant Cloud Build permission to deploy to Cloud Run
